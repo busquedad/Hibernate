@@ -3,16 +3,16 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package pizzamdp;
+package entidades;
 
 /**
  *
- * @author usuario
+ * @author PC-MATT
  */
 public class TipoPizza {
     private int id_tipo_pizza;
     private String nombre;
-    private String descripcion;
+    private String descripcionPizza;
     
     
     public int getId_tipo_pizza() {
@@ -32,10 +32,10 @@ public class TipoPizza {
     }
 
     public String getDescripcion() {
-        return descripcion;
+        return descripcionPizza;
     }
 
     public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
+        this.descripcionPizza = descripcion;
     }
 }
