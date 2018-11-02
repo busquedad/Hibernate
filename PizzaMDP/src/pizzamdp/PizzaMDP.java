@@ -45,12 +45,12 @@ public class PizzaMDP {
            System.out.println("registro eliminado");*/
            
             /**SQL Insert = Hibernet save*/
-           TipoPizza tipoPizza = new TipoPizza();
-            tipoPizza.setNombre("Pizza anana");
-            tipoPizza.setDescripcionPizza("anana, Muzzarella");
+           /* TipoPizza tipoPizza = new TipoPizza();
+            tipoPizza.setNombre("Pizza Napolitana");
+            tipoPizza.setDescripcionPizza("Tomate, Muzzarella, lechuga");
             session.save(tipoPizza);
             session.getTransaction().commit();
-            System.out.println("registro ingresado");
+            System.out.println("registro ingresado");*/
             
          /**SQL Select = Hibernet get*/
          /* TipoPizza tipoPizza = (TipoPizza) session.get(TipoPizza.class, 3);
