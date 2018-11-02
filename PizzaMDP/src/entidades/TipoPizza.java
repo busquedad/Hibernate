@@ -13,8 +13,7 @@ public class TipoPizza {
     private int id_tipo_pizza;
     private String nombre;
     private String descripcionPizza;
-    
-    
+
     public int getId_tipo_pizza() {
         return id_tipo_pizza;
     }
@@ -31,11 +30,13 @@ public class TipoPizza {
         this.nombre = nombre;
     }
 
-    public String getDescripcion() {
+    public String getDescripcionPizza() {
         return descripcionPizza;
     }
 
-    public void setDescripcion(String descripcion) {
-        this.descripcionPizza = descripcion;
+    public void setDescripcionPizza(String descripcionPizza) {
+        this.descripcionPizza = descripcionPizza;
     }
+    
+    
 }

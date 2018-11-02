@@ -6,8 +6,9 @@
     <property name="hibernate.connection.driver_class">com.mysql.jdbc.Driver</property>
     <property name="hibernate.connection.url">jdbc:mysql://localhost:3306/poo-pizzeria?zeroDateTimeBehavior=convertToNull</property>
     <property name="hibernate.connection.username">root</property>
-    <property name="hibernate.connection.password">123456</property>
+    <property name="hibernate.connection.password">1234</property>
     
+    <mapping resource="entidades/TipoPizza.hbm.xml"/> 
     
   </session-factory>
 </hibernate-configuration>
