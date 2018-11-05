@@ -6,6 +6,7 @@
 package pizzamdp;
 
 
+import entidades.TamanioPizza;
 import entidades.TipoPizza;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -37,6 +38,12 @@ public class PizzaMDP {
        
             
             session.beginTransaction();
+        TamanioPizza tamaniopizza = (TamanioPizza) session.get(TamanioPizza.class,1);
+            if (tamaniopizza != null){
+                System.out.println(tamaniopizza.getCant_porciones());
+                System.out.println(tamaniopizza.getNombre());
+                System.out.println(tamaniopizza.id_tamanio_pizza);
+         }
     
          
          TipoPizza tipoPizza = (TipoPizza) session.get(TipoPizza.class, 1);
@@ -46,6 +53,8 @@ public class PizzaMDP {
          System.out.println(tipoPizza.getDescripcionPizza());
          System.out.println(tipoPizza.getId_tipo_pizza());
          System.out.println(tipoPizza.getNombre());
+         
+
          
          }else{
            System.out.println("No existe el elemento ");
