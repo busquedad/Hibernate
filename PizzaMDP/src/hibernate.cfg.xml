@@ -9,5 +9,6 @@
     <property name="hibernate.connection.password">1234</property>
     <mapping resource="entidades/TipoPizza.hbm.xml"/>
     <mapping resource="entidades/TamanioPizza.hbm.xml"/>
+    <mapping resource="entidades/VariedadPizza.hbm.xml"/>
   </session-factory>
 </hibernate-configuration>
