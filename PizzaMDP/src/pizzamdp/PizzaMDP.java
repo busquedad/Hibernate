@@ -3,21 +3,23 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package pizzamdp;
 
 
 import entidades.TipoPizza;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
+
+
 /**
  *
- * @author busquedad
+ * @author PC-MATT
  */
-
 public class PizzaMDP {
 
     /**
@@ -25,6 +27,7 @@ public class PizzaMDP {
      */
     public static void main(String[] args) throws HibernateException {
         // TODO code application logic here
+     
         
         SessionFactory sessionFactory =
         new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
@@ -32,44 +35,27 @@ public class PizzaMDP {
        
         try {
        
-            session.beginTransaction();
-       // Address address = new Address("OMR Road", "Chennai", "TN", "600097");
-        //By using cascade=all option the address need not be saved explicitly when the student object is persisted the address will be automatically saved.
-            //session.save(address);
-       
-           /**SQL Delete = Hibernate delete*/
-           /*TipoPizza tipoPizza = new TipoPizza();
-           tipoPizza.setId_tipo_pizza(5);
-           session.delete(tipoPizza);
-           session.getTransaction().commit();
-           System.out.println("registro eliminado");*/
-           
-            /**SQL Insert = Hibernet save*/
-           /* TipoPizza tipoPizza = new TipoPizza();
-            tipoPizza.setNombre("Pizza Napolitana");
-            tipoPizza.setDescripcionPizza("Tomate, Muzzarella, lechuga");
-            session.save(tipoPizza);
-            session.getTransaction().commit();
-            System.out.println("registro ingresado");*/
             
-         /**SQL Select = Hibernet get*/
-         /* TipoPizza tipoPizza = (TipoPizza) session.get(TipoPizza.class, 3);
-            if (tipoPizza != null){
-                System.out.println(tipoPizza.getDescripcionPizza());
-                System.out.println(tipoPizza.getId_tipo_pizza());
-                System.out.println(tipoPizza.getNombre());
-            }else{
-                System.out.println("No existe registro");
-            }*/
+            session.beginTransaction();
+    
          
-         /**SQL Update = Hibernet get,set,update*/
-             /*TipoPizza tipoPizza = (TipoPizza) session.get(TipoPizza.class, 6);
-             tipoPizza.setNombre("Quatro Quesos");
-             session.update(tipoPizza);
-             session.getTransaction().commit();*/
-
-        } catch (HibernateException e) {
-        //  System.out.print(e.);
+         TipoPizza tipoPizza = (TipoPizza) session.get(TipoPizza.class, 1);
+         
+           if (tipoPizza != null){
+         
+         System.out.println(tipoPizza.getDescripcionPizza());
+         System.out.println(tipoPizza.getId_tipo_pizza());
+         System.out.println(tipoPizza.getNombre());
+         
+         }else{
+           System.out.println("No existe el elemento ");
+           }
+        
+        
+        
+       
+        } catch (Exception e) {
+          System.out.print(e.toString());
         } finally {
         session.close();
         }
