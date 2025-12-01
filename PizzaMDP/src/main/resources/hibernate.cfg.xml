@@ -8,8 +8,8 @@
     <property name="hibernate.connection.username">sa</property>
     <property name="hibernate.connection.password"></property>
     <property name="hbm2ddl.auto">update</property>
-    <mapping resource="TipoPizza.hbm.xml"/>
-    <mapping resource="TamanioPizza.hbm.xml"/>
-    <mapping resource="VariedadPizza.hbm.xml"/>
+    <mapping resource="entidades/TipoPizza.hbm.xml"/>
+    <mapping resource="entidades/TamanioPizza.hbm.xml"/>
+    <mapping resource="entidades/VariedadPizza.hbm.xml"/>
   </session-factory>
 </hibernate-configuration>
