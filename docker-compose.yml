@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  backend:
+    build: ./PizzaMDP
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data_persistence:/app/data
+    networks:
+      - pizza-net
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - pizza-net
+
+networks:
+  pizza-net:

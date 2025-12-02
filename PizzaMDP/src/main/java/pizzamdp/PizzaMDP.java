@@ -1,73 +1,86 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package pizzamdp;
 
-
+import static spark.Spark.*;
+import com.google.gson.Gson;
 import entidades.TamanioPizza;
-import entidades.TipoPizza;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.hibernate.HibernateException;
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.cfg.Configuration;
+import org.hibernate.Transaction;
+import persistencia.HibernateUtil;
+import java.util.List;
+import java.io.File;
 
-
-
-/**
- *
- * @author PC-MATT
- */
 public class PizzaMDP {
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) throws HibernateException {
-        // TODO code application logic here
-     
-        
-        SessionFactory sessionFactory =
-        new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
-        Session session = sessionFactory.openSession();
-       
-        try {
-       
-            
-            session.beginTransaction();
-        TamanioPizza tamaniopizza = (TamanioPizza) session.get(TamanioPizza.class,1);
-            if (tamaniopizza != null){
-                System.out.println(tamaniopizza.getCant_porciones());
-                System.out.println(tamaniopizza.getNombre());
-                System.out.println(tamaniopizza.id_tamanio_pizza);
-         }
-    
-         
-         TipoPizza tipoPizza = (TipoPizza) session.get(TipoPizza.class, 1);
-         
-           if (tipoPizza != null){
-         
-         System.out.println(tipoPizza.getDescripcionPizza());
-         System.out.println(tipoPizza.getId_tipo_pizza());
-         System.out.println(tipoPizza.getNombre());
-         
+    public static void bootstrapData() {
+        System.out.println("--- [DEBUG] bootstrapData START ---");
+        Transaction tx = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            tx = session.beginTransaction();
+            System.out.println("--- [DEBUG] Transaction BEGIN ---");
 
-         
-         }else{
-           System.out.println("No existe el elemento ");
-           }
-        
-        
-        
-       
+            if (session.createQuery("from TamanioPizza").list().isEmpty()) {
+                System.out.println("--- [DEBUG] TamanioPizza table is empty. Seeding data... ---");
+
+                TamanioPizza t1 = new TamanioPizza();
+                t1.setNombre("Chica");
+                t1.setCant_porciones(4);
+                System.out.println("--- [DEBUG] Saving t1: " + t1.getNombre() + " ---");
+                session.save(t1);
+
+                TamanioPizza t2 = new TamanioPizza();
+                t2.setNombre("Grande");
+                t2.setCant_porciones(8);
+                System.out.println("--- [DEBUG] Saving t2: " + t2.getNombre() + " ---");
+                session.save(t2);
+
+                System.out.println("--- [DEBUG] Committing transaction ---");
+                tx.commit();
+                System.out.println("--- [DEBUG] Transaction COMMIT successful ---");
+            } else {
+                System.out.println("--- [DEBUG] TamanioPizza table already has data. Skipping seed. ---");
+            }
         } catch (Exception e) {
-          System.out.print(e.toString());
-        } finally {
-        session.close();
+            System.err.println("--- [DEBUG] BOOTSTRAP FAILED ---");
+            if (tx != null) {
+                try {
+                    System.err.println("--- [DEBUG] Rolling back transaction ---");
+                    tx.rollback();
+                } catch (Exception rbEx) {
+                    System.err.println("--- [DEBUG] Could not rollback transaction: " + rbEx.getMessage() + " ---");
+                }
+            }
+            e.printStackTrace(System.err);
         }
-        }
-    
+        System.out.println("--- [DEBUG] bootstrapData END ---");
+    }
+
+    public static void main(String[] args) {
+        new File("data").mkdirs();
+        bootstrapData();
+        port(8080);
+        options("/*", (request, response) -> {
+            String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
+            if (accessControlRequestHeaders != null) {
+                response.header("Access-Control-Allow-Headers", accessControlRequestHeaders);
+            }
+            String accessControlRequestMethod = request.headers("Access-Control-Request-Method");
+            if (accessControlRequestMethod != null) {
+                response.header("Access-Control-Allow-Methods", accessControlRequestMethod);
+            }
+            return "OK";
+        });
+        before((request, response) -> response.header("Access-Control-Allow-Origin", "*"));
+        Gson gson = new Gson();
+        get("/api/pizzas", (req, res) -> {
+            res.type("application/json");
+            try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+                List<TamanioPizza> pizzas = session.createQuery("from TamanioPizza", TamanioPizza.class).list();
+                return gson.toJson(pizzas);
+            } catch (Exception e) {
+                e.printStackTrace();
+                res.status(500);
+                return gson.toJson(e.getMessage());
+            }
+        });
+    }
 }

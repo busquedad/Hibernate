@@ -5,14 +5,12 @@
  */
 package entidades;
 
-import persistencia.PersistentObject;
-
 /**
  *
  * @author PC-MATT
  */
-public class TipoPizza  {
-    private int id_tipo_pizza;
+public class TipoPizza {
+    private Integer id_tipo_pizza;
     private String nombre;
     private String descripcionPizza;
 
@@ -25,11 +23,11 @@ public class TipoPizza  {
     }
     
     
-    public int getId_tipo_pizza() {
+    public Integer getId_tipo_pizza() {
         return id_tipo_pizza;
     }
 
-    public void setId_tipo_pizza(int id_tipo_pizza) {
+    public void setId_tipo_pizza(Integer id_tipo_pizza) {
         this.id_tipo_pizza = id_tipo_pizza;
     }
 
