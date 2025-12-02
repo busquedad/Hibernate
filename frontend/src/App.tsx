@@ -5,6 +5,17 @@ import PizzaDisplay from './components/PizzaDisplay';
 import { fetchPizzas } from './services/pizzaService';
 import type { PizzaData } from './services/pizzaService';
 
+/**
+ * The main component of the Pizza Management Dashboard application.
+ * It fetches pizza data from the API and displays it using the PizzaDisplay component.
+ *
+ * @returns {JSX.Element} The rendered App component.
+ *
+ * @example
+ * ```tsx
+ * <App />
+ * ```
+ */
 const App: React.FC = () => {
   const [pizzas, setPizzas] = useState<PizzaData[]>([]);
   const [error, setError] = useState<string | null>(null);
