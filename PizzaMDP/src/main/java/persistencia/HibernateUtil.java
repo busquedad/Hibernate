@@ -16,24 +16,31 @@ import org.hibernate.cfg.Configuration;
  */
 public class HibernateUtil {
 
-    private static final SessionFactory sessionFactory;
-	static {
-		try {
-			// Create the SessionFactory from hibernate.cfg.xml
-			sessionFactory = new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
+    private static SessionFactory sessionFactory;
+
+    static {
+        try {
+            // Create the SessionFactory from hibernate.cfg.xml
+            sessionFactory = new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
+        } catch (Throwable ex) {
+            System.err.println("Initial SessionFactory creation failed." + ex);
+            throw new ExceptionInInitializerError(ex);
         }
-		catch (Throwable ex) {
-			System.err.println("Initial SessionFactory creation failed." + ex);
-			throw new ExceptionInInitializerError(ex);
-		}
-	}
+    }
 
     /**
      * Gets the singleton instance of the SessionFactory.
      * @return The SessionFactory instance.
      */
-	public static SessionFactory getSessionFactory() {
-		return sessionFactory;
-	}
+    public static SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
 
+    /**
+     * Sets the SessionFactory. This method is intended for testing purposes only.
+     * @param sf The SessionFactory to use.
+     */
+    public static void setSessionFactory(SessionFactory sf) {
+        sessionFactory = sf;
+    }
 }
