@@ -58,6 +58,14 @@ public class PizzaMDP {
         new File("data").mkdirs();
         bootstrapData();
         port(8080);
+
+        // Se recomienda obtener el origen permitido de una variable de entorno en producción
+        String allowedOrigin = System.getenv("ALLOWED_ORIGIN");
+        if (allowedOrigin == null) {
+            allowedOrigin = "http://localhost:5173";
+        }
+        final String finalAllowedOrigin = allowedOrigin;
+
         options("/*", (request, response) -> {
             String accessControlRequestHeaders = request.headers("Access-Control-Request-Headers");
             if (accessControlRequestHeaders != null) {
@@ -69,7 +77,11 @@ public class PizzaMDP {
             }
             return "OK";
         });
-        before((request, response) -> response.header("Access-Control-Allow-Origin", "*"));
+
+        before((request, response) -> {
+            response.header("Access-Control-Allow-Origin", finalAllowedOrigin);
+        });
+
         Gson gson = new Gson();
         get("/api/pizzas", (req, res) -> {
             res.type("application/json");
@@ -77,9 +89,10 @@ public class PizzaMDP {
                 List<TamanioPizza> pizzas = session.createQuery("from TamanioPizza", TamanioPizza.class).list();
                 return gson.toJson(pizzas);
             } catch (Exception e) {
-                e.printStackTrace();
+                // Se recomienda utilizar un logger en lugar de e.printStackTrace()
+                // y no exponer los mensajes de excepción directamente al cliente
                 res.status(500);
-                return gson.toJson(e.getMessage());
+                return gson.toJson("Error interno del servidor");
             }
         });
     }

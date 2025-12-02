@@ -10,9 +10,9 @@ package entidades;
  * @author usuario
  */
 public class TamanioPizza {
-    public Integer id_tamanio_pizza;
-    public String nombre;
-    public int cant_porciones;
+    private Integer id_tamanio_pizza;
+    private String nombre;
+    private int cant_porciones;
 
     public TamanioPizza() {
     }
