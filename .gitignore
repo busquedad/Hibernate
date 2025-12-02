@@ -6,4 +6,11 @@
 
 # Vite
 .vite/
+
+# Logs
 *.log
+*.err
+
+# Data
+data_persistence/
+PizzaMDP/data/

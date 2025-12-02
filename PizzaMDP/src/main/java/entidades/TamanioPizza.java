@@ -10,15 +10,18 @@ package entidades;
  * @author usuario
  */
 public class TamanioPizza {
-    public int id_tamanio_pizza;
+    public Integer id_tamanio_pizza;
     public String nombre;
     public int cant_porciones;
 
-    public int getId_tamanio_pizza() {
+    public TamanioPizza() {
+    }
+
+    public Integer getId_tamanio_pizza() {
         return id_tamanio_pizza;
     }
 
-    public void setId_tamanio_pizza(int id_tamanio_pizza) {
+    public void setId_tamanio_pizza(Integer id_tamanio_pizza) {
         this.id_tamanio_pizza = id_tamanio_pizza;
     }
 

@@ -10,15 +10,15 @@ package entidades;
  * @author usuario
  */
 public class VariedadPizza {
-    public int id_variedad_pizza;
+    public Integer id_variedad_pizza;
     public String nombre;
     public String ingredientes;
 
-    public int getId_variedad_pizza() {
+    public Integer getId_variedad_pizza() {
         return id_variedad_pizza;
     }
 
-    public void setId_variedad_pizza(int id_variedad_pizza) {
+    public void setId_variedad_pizza(Integer id_variedad_pizza) {
         this.id_variedad_pizza = id_variedad_pizza;
     }
 
