@@ -13,6 +13,19 @@ interface PizzaDisplayProps {
   error: string | null;
 }
 
+/**
+ * A component that displays a list of pizzas or an error message.
+ *
+ * @param {PizzaDisplayProps} props - The component props.
+ * @param {PizzaData[]} props.pizzas - The list of pizzas to display.
+ * @param {string | null} props.error - An error message to display, if any.
+ * @returns {JSX.Element} The rendered PizzaDisplay component.
+ *
+ * @example
+ * ```tsx
+ * <PizzaDisplay pizzas={pizzas} error={null} />
+ * ```
+ */
 const PizzaDisplay: React.FC<PizzaDisplayProps> = ({ pizzas, error }) => {
   if (error) {
     return <div className="text-red-500">Error: {error}</div>;

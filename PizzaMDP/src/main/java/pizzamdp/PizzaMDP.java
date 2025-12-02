@@ -9,8 +9,18 @@ import persistencia.HibernateUtil;
 import java.util.List;
 import java.io.File;
 
+/**
+ * Main class for the PizzaMDP application.
+ * This class is responsible for bootstrapping the application,
+ * seeding initial data, and defining the API endpoints.
+ */
 public class PizzaMDP {
 
+    /**
+     * Seeds the database with initial data if it's empty.
+     * This method adds two default pizza sizes ("Chica" and "Grande") to the database.
+     * It handles transactions and rolls back on failure.
+     */
     public static void bootstrapData() {
         System.out.println("--- [DEBUG] bootstrapData START ---");
         Transaction tx = null;
@@ -54,6 +64,13 @@ public class PizzaMDP {
         System.out.println("--- [DEBUG] bootstrapData END ---");
     }
 
+    /**
+     * The main entry point for the application.
+     * It initializes the application, sets up the server port,
+     * configures CORS, and defines the API endpoints.
+     *
+     * @param args Command line arguments (not used).
+     */
     public static void main(String[] args) {
         new File("data").mkdirs();
         bootstrapData();
