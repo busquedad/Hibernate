@@ -218,16 +218,22 @@ The response will contain an `access_token`. You can decode it using a tool like
 }
 ```
 
-## 6. Security Edge Cases
+## 6. Application Edge Cases
 
-This matrix outlines how the system responds to various security-related edge cases.
+This matrix outlines how the system responds to various security and functional edge cases.
 
-| # | Edge Case Scenario                                  | Action Triggering the Case                                 | Expected System Response                                  | HTTP Status Code |
-|---|-----------------------------------------------------|------------------------------------------------------------|-----------------------------------------------------------|------------------|
-| 1 | **Invalid Token**                                   | API request with a malformed or invalid JWT.               | The Resource Server rejects the request.                  | `401 Unauthorized` |
-| 2 | **Expired Token**                                   | API request with a valid but expired JWT.                  | The Resource Server rejects the request.                  | `401 Unauthorized` |
-| 3 | **Insufficient Permissions (User trying Admin route)** | A user with `ROLE_USUARIO` attempts to access `/catalogo`. | The Resource Server denies access due to role mismatch.   | `403 Forbidden`    |
-| 4 | **No Token Provided**                               | API request to a protected endpoint without an `Authorization` header. | The Resource Server rejects the request.                  | `401 Unauthorized` |
-| 5 | **User without Roles**                              | A valid user is authenticated but has no roles assigned.   | The user can obtain a token, but access to all role-protected routes will be denied. | `403 Forbidden`    |
-| 6 | **Invalid Client ID during Token Request**          | Token request to `/oauth2/token` with an unknown `client_id`. | The Authorization Server rejects the request.              | `401 Unauthorized` |
-| 7 | **Incorrect PKCE Verifier**                         | Token exchange request with an incorrect `code_verifier`.  | The Authorization Server rejects the exchange.             | `400 Bad Request`  |
+| Category      | # | Edge Case Scenario                                      | Action Triggering the Case                                     | Expected System Response                                               | HTTP Status Code   |
+|---------------|---|---------------------------------------------------------|----------------------------------------------------------------|------------------------------------------------------------------------|--------------------|
+| **Security**  | 1 | **Invalid Token**                                       | API request with a malformed or invalid JWT.                   | The Resource Server rejects the request.                               | `401 Unauthorized` |
+|               | 2 | **Expired Token**                                       | API request with a valid but expired JWT.                      | The Resource Server rejects the request.                               | `401 Unauthorized` |
+|               | 3 | **Insufficient Permissions**                            | A user with `ROLE_USUARIO` attempts to access `/catalogo`.     | The Resource Server denies access due to role mismatch.                | `403 Forbidden`    |
+|               | 4 | **No Token Provided**                                   | API request to a protected endpoint without `Authorization`.   | The Resource Server rejects the request.                               | `401 Unauthorized` |
+|               | 5 | **Incorrect PKCE Verifier**                             | Token exchange request with an incorrect `code_verifier`.      | The Authorization Server rejects the exchange.                         | `400 Bad Request`  |
+| **Catalog**   | 6 | **Resource Not Found**                                  | `GET` request for a resource with a non-existent ID (e.g., `/catalogo/variedad/999`). | The server cannot find the requested resource.                         | `404 Not Found`    |
+|               | 7 | **Invalid Input Data**                                  | `POST` request to create a pizza variety with an empty name.   | The server validates the input and rejects it due to missing data.     | `400 Bad Request`  |
+|               | 8 | **Duplicate Resource Creation**                         | `POST` request to create a pizza variety with a name that already exists. | The server identifies a conflict with existing data.                   | `409 Conflict`     |
+| **Orders (OMS)** | 9 | **Order for Non-existent Item**                         | `POST` request to `/oms/ordenes` for a pizza variety ID that does not exist. | The system cannot process the order because the item is not in the catalog. | `400 Bad Request`  |
+|               | 10| **Order for Out-of-Stock Item**                         | `POST` request to `/oms/ordenes` for an item with zero stock. | The system cannot fulfill the order due to lack of stock.              | `409 Conflict`     |
+|               | 11| **Check Status of Non-existent Order**                  | `GET` request to `/oms/ordenes/status` with an invalid order ID. | The server cannot find the requested order.                            | `404 Not Found`    |
+| **Stock**     | 12| **Update Stock for Non-existent Item**                  | `PUT` request to `/stock` for a pizza variety ID that does not exist. | The server cannot find the item to update its stock.                   | `404 Not Found`    |
+|               | 13| **Set Negative Stock**                                  | `PUT` request to `/stock` with a negative value.               | The server validates the input and rejects the negative value.         | `400 Bad Request`  |
