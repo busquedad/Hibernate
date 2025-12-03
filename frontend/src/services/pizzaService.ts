@@ -20,10 +20,14 @@ export interface PizzaData {
  * console.log(pizzas);
  * ```
  */
+import axios from 'axios';
+
 export const fetchPizzas = async (): Promise<PizzaData[]> => {
-  const response = await fetch(`${API_URL}/pizzas`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch pizzas');
-  }
-  return response.json();
+  const token = localStorage.getItem('access_token');
+  const response = await axios.get(`${API_URL}/pizzas`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return response.data;
 };
