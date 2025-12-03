@@ -34,8 +34,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Configuración del Servidor de Autorización OAuth2.
- * Define los clientes OAuth2, las claves de firma de tokens y la personalización de JWT.
+ * Configuración avanzada para el Servidor de Autorización OAuth2.
+ * <p>
+ * Esta clase establece la infraestructura central para la emisión y gestión de tokens OAuth2,
+ * incluyendo el registro de clientes, la configuración de firmas criptográficas y la
+ * personalización de los claims del JWT para incluir información de roles (RBAC).
+ *
+ * @see org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration
+ * @see <a href="https://tools.ietf.org/html/rfc6749" target="_blank">The OAuth 2.0 Authorization Framework (RFC 6749)</a>
  */
 @Configuration
 public class AuthorizationServerConfig {
@@ -44,12 +50,17 @@ public class AuthorizationServerConfig {
     private String clientId;
 
     /**
-     * Define el filtro de seguridad principal para el Servidor de Autorización.
-     * Aplica la configuración de seguridad por defecto de OAuth2 y habilita el login por formulario.
+     * Define y configura el filtro de seguridad principal para el Servidor de Autorización.
+     * <p>
+     * Este filtro, con prioridad {@code @Order(1)}, aplica la configuración de seguridad por
+     * defecto de Spring Authorization Server, que incluye los endpoints estándar de OAuth2
+     * (e.g., {@code /oauth2/authorize}, {@code /oauth2/token}). También habilita la
+     * autenticación de usuarios a través de un formulario de login estándar.
      *
-     * @param http El constructor de seguridad HTTP.
-     * @return El {@link SecurityFilterChain} configurado.
-     * @throws Exception Si ocurre un error durante la configuración.
+     * @param http El constructor de seguridad HTTP para configurar el {@link SecurityFilterChain}.
+     * @return Una instancia de {@link SecurityFilterChain} configurada para el servidor de autorización.
+     * @throws Exception Si ocurre un error durante la configuración de la seguridad.
+     * @see OAuth2AuthorizationServerConfiguration#applyDefaultSecurity(HttpSecurity)
      */
     @Bean
     @Order(1)
@@ -59,10 +70,16 @@ public class AuthorizationServerConfig {
     }
 
     /**
-     * Configura el repositorio de clientes OAuth2 registrados.
-     * Para este ejemplo, se utiliza un cliente en memoria.
+     * Configura el repositorio de clientes OAuth2 registrados que pueden interactuar con este servidor.
+     * <p>
+     * Para esta implementación, se utiliza un {@link InMemoryRegisteredClientRepository}, que es adecuado
+     * para entornos de demostración o con un número de clientes estático y limitado. El cliente
+     * está configurado para el flujo de "Authorization Code" con PKCE, un estándar de seguridad
+     * recomendado para aplicaciones de página única (SPA) y clientes públicos.
      *
-     * @return Un {@link RegisteredClientRepository} con un cliente preconfigurado.
+     * @return Un {@link RegisteredClientRepository} que contiene la configuración del cliente.
+     * @see RegisteredClient
+     * @see <a href="https://tools.ietf.org/html/rfc7636" target="_blank">Proof Key for Code Exchange (PKCE)</a>
      */
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
@@ -74,8 +91,8 @@ public class AuthorizationServerConfig {
                 .scope(OidcScopes.OPENID)
                 .scope("pizza.read")
                 .clientSettings(ClientSettings.builder()
-                        .requireAuthorizationConsent(true)
-                        .requireProofKey(true)
+                        .requireAuthorizationConsent(true) // Requiere consentimiento del usuario
+                        .requireProofKey(true) // Habilita PKCE
                         .build())
                 .build();
 
@@ -83,10 +100,15 @@ public class AuthorizationServerConfig {
     }
 
     /**
-     * Crea y expone la fuente de claves de firma de JWT (JWKSource).
-     * Utiliza un par de claves RSA generado en el arranque.
+     * Crea y expone una {@link JWKSource} para la firma de tokens JWT.
+     * <p>
+     * Las claves JSON Web Key (JWK) son un estándar para representar claves criptográficas.
+     * Esta implementación genera un par de claves RSA de 2048 bits en el arranque de la aplicación
+     * y las expone a través de un {@link JWKSet}. El servidor de autorización utilizará estas
+     * claves para firmar los JWT, y el servidor de recursos las usará para verificar la firma.
      *
-     * @return Un {@link JWKSource} inmutable.
+     * @return Una fuente inmutable de claves JWK ({@link JWKSource}).
+     * @see <a href="https://tools.ietf.org/html/rfc7517" target="_blank">JSON Web Key (JWK)</a>
      */
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
@@ -102,9 +124,10 @@ public class AuthorizationServerConfig {
     }
 
     /**
-     * Genera un par de claves RSA de 2048 bits.
+     * Genera un par de claves criptográficas RSA de 2048 bits de forma programática.
      *
-     * @return El {@link KeyPair} generado.
+     * @return El {@link KeyPair} (clave pública y privada) generado.
+     * @throws IllegalStateException Si el algoritmo RSA no está disponible.
      */
     private static KeyPair generateRsaKey() {
         KeyPair keyPair;
@@ -119,9 +142,14 @@ public class AuthorizationServerConfig {
     }
 
     /**
-     * Configura las opciones del Servidor de Autorización, como el emisor (issuer).
+     * Configura las opciones globales del Servidor de Autorización, como la URL del emisor (issuer).
+     * <p>
+     * El emisor es una URL única que identifica al servidor de autorización, un claim estándar
+     * ({@code iss}) en los tokens JWT, fundamental para la validación de tokens en el lado del
+     * servidor de recursos.
      *
-     * @return Un objeto {@link AuthorizationServerSettings}.
+     * @return Un objeto {@link AuthorizationServerSettings} con la configuración del emisor.
+     * @see <a href="https://tools.ietf.org/html/rfc7519#section-4.1.1" target="_blank">JWT 'iss' (Issuer) Claim</a>
      */
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
@@ -129,11 +157,14 @@ public class AuthorizationServerConfig {
     }
 
     /**
-     * Personaliza el token JWT para incluir un claim "roles".
-     * Este claim contiene la lista de roles del usuario, extraídos de sus {@link GrantedAuthority}.
-     * Se elimina el prefijo "ROLE_" para mayor limpieza.
+     * Personaliza el contenido del token JWT para inyectar claims adicionales.
+     * <p>
+     * Este {@link OAuth2TokenCustomizer} enriquece el token JWT con un claim personalizado "roles".
+     * Extrae las autoridades (roles) del principal de seguridad autenticado ({@code context.getPrincipal()}),
+     * elimina el prefijo "ROLE_" para mayor limpieza, y las añade como una lista de strings.
+     * Esto es crucial para implementar el Control de Acceso Basado en Roles (RBAC) en el Servidor de Recursos.
      *
-     * @return Un {@link OAuth2TokenCustomizer} que añade el claim "roles".
+     * @return Un {@link OAuth2TokenCustomizer} que añade el claim "roles" al JWT.
      */
     @Bean
     public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
