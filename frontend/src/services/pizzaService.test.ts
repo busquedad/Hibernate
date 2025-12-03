@@ -1,10 +1,10 @@
 // src/services/pizzaService.test.ts
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import axios from 'axios';
 import { fetchPizzas } from './pizzaService';
 
-// Mock global fetch
-global.fetch = vi.fn();
+vi.mock('axios');
 
 describe('pizzaService', () => {
 
@@ -17,22 +17,20 @@ describe('pizzaService', () => {
       { id_tamanio_pizza: 1, nombre: 'Grande', cant_porciones: 8 },
       { id_tamanio_pizza: 2, nombre: 'Chica', cant_porciones: 4 },
     ];
-
-    (fetch as vi.Mock).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockPizzas),
-    });
+    (axios.get as vi.Mock).mockResolvedValue({ data: mockPizzas });
 
     const pizzas = await fetchPizzas();
     expect(pizzas).toEqual(mockPizzas);
-    expect(fetch).toHaveBeenCalledWith('/api/pizzas');
+    expect(axios.get).toHaveBeenCalledWith('/api/pizzas', {
+      headers: {
+        Authorization: 'Bearer null'
+      }
+    });
   });
 
   it('should throw an error if the fetch fails', async () => {
-    (fetch as vi.Mock).mockResolvedValue({
-      ok: false,
-    });
+    (axios.get as vi.Mock).mockRejectedValue(new Error('Network Error'));
 
-    await expect(fetchPizzas()).rejects.toThrow('Failed to fetch pizzas');
+    await expect(fetchPizzas()).rejects.toThrow('Network Error');
   });
 });
