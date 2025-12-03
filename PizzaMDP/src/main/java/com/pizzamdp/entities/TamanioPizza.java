@@ -1,9 +1,11 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-package entidades;
+package com.pizzamdp.entities;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
 /**
  * Represents the size of a pizza.
@@ -11,9 +13,18 @@ package entidades;
  *
  * @author usuario
  */
+@Entity
+@Table(name = "tamaniopizza")
 public class TamanioPizza {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_tamanio_pizza")
     private Integer id_tamanio_pizza;
+
+    @Column(name = "nombre")
     private String nombre;
+
+    @Column(name = "cant_porciones")
     private int cant_porciones;
 
     /**
