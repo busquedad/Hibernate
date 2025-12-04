@@ -2,16 +2,16 @@ package com.pizzamdp.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pizzamdp.entities.TamanioPizza;
-import com.pizzamdp.repositories.TamanioPizzaRepository;
+import com.pizzamdp.services.CatalogService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-
+import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -20,15 +20,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+
 
 @WebMvcTest(TamanioPizzaController.class)
+@TestPropertySource(properties = {"spring.jpa.hibernate.ddl-auto=none"})
 public class TamanioPizzaControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
-    private TamanioPizzaRepository tamanioPizzaRepository;
+    private CatalogService catalogService;
+
+    @MockBean
+    private FlywayMigrationStrategy flywayMigrationStrategy; // Keep this to disable flyway
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -39,7 +45,7 @@ public class TamanioPizzaControllerTest {
         TamanioPizza pizza1 = new TamanioPizza(1, "Chica", 4);
         TamanioPizza pizza2 = new TamanioPizza(2, "Grande", 8);
 
-        when(tamanioPizzaRepository.findAll()).thenReturn(Arrays.asList(pizza1, pizza2));
+        when(catalogService.getAllTamanios()).thenReturn(Arrays.asList(pizza1, pizza2));
 
         mockMvc.perform(get("/api/tamanio-pizzas").with(jwt()))
                 .andExpect(status().isOk())
@@ -53,7 +59,7 @@ public class TamanioPizzaControllerTest {
     public void getTamanioPizzaById_shouldReturnPizza() throws Exception {
         TamanioPizza pizza = new TamanioPizza(1, "Chica", 4);
 
-        when(tamanioPizzaRepository.findById(1)).thenReturn(Optional.of(pizza));
+        when(catalogService.getTamanioById(1)).thenReturn(Optional.of(pizza));
 
         mockMvc.perform(get("/api/tamanio-pizzas/1").with(jwt()))
                 .andExpect(status().isOk())
@@ -65,7 +71,7 @@ public class TamanioPizzaControllerTest {
     public void createTamanioPizza_shouldCreatePizza() throws Exception {
         TamanioPizza pizza = new TamanioPizza(1, "Chica", 4);
 
-        when(tamanioPizzaRepository.save(any(TamanioPizza.class))).thenReturn(pizza);
+        when(catalogService.createTamanio(any(TamanioPizza.class))).thenReturn(pizza);
 
         mockMvc.perform(post("/api/tamanio-pizzas").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -77,11 +83,9 @@ public class TamanioPizzaControllerTest {
     @Test
     @WithMockUser
     public void updateTamanioPizza_shouldUpdatePizza() throws Exception {
-        TamanioPizza pizza = new TamanioPizza(1, "Chica", 4);
         TamanioPizza updatedPizza = new TamanioPizza(1, "Chica Nueva", 5);
 
-        when(tamanioPizzaRepository.findById(1)).thenReturn(Optional.of(pizza));
-        when(tamanioPizzaRepository.save(any(TamanioPizza.class))).thenReturn(updatedPizza);
+        when(catalogService.updateTamanio(any(Integer.class), any(TamanioPizza.class))).thenReturn(Optional.of(updatedPizza));
 
         mockMvc.perform(put("/api/tamanio-pizzas/1").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -93,7 +97,7 @@ public class TamanioPizzaControllerTest {
     @Test
     @WithMockUser
     public void deleteTamanioPizza_shouldDeletePizza() throws Exception {
-        when(tamanioPizzaRepository.existsById(1)).thenReturn(true);
+        when(catalogService.deleteTamanio(1)).thenReturn(true);
 
         mockMvc.perform(delete("/api/tamanio-pizzas/1").with(jwt()))
                 .andExpect(status().isOk());

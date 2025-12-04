@@ -1,55 +1,47 @@
 package com.pizzamdp.controllers;
 
 import com.pizzamdp.entities.VariedadPizza;
-import com.pizzamdp.repositories.VariedadPizzaRepository;
+import com.pizzamdp.services.CatalogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/variedad-pizzas")
 public class VariedadPizzaController {
 
     @Autowired
-    private VariedadPizzaRepository variedadPizzaRepository;
+    private CatalogService catalogService;
 
     @GetMapping
     public List<VariedadPizza> getAllVariedadPizzas() {
-        return variedadPizzaRepository.findAll();
+        return catalogService.getAllVariedades();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<VariedadPizza> getVariedadPizzaById(@PathVariable Integer id) {
-        Optional<VariedadPizza> variedadPizza = variedadPizzaRepository.findById(id);
-        return variedadPizza.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return catalogService.getVariedadById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public VariedadPizza createVariedadPizza(@RequestBody VariedadPizza variedadPizza) {
-        return variedadPizzaRepository.save(variedadPizza);
+        return catalogService.createVariedad(variedadPizza);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<VariedadPizza> updateVariedadPizza(@PathVariable Integer id, @RequestBody VariedadPizza variedadPizzaDetails) {
-        return variedadPizzaRepository.findById(id)
-                .map(existingVariedad -> {
-                    VariedadPizza updatedVariedad = new VariedadPizza(
-                            existingVariedad.id_variedad_pizza(),
-                            variedadPizzaDetails.nombre(),
-                            variedadPizzaDetails.ingredientes()
-                    );
-                    return ResponseEntity.ok(variedadPizzaRepository.save(updatedVariedad));
-                })
+        return catalogService.updateVariedad(id, variedadPizzaDetails)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteVariedadPizza(@PathVariable Integer id) {
-        if (variedadPizzaRepository.existsById(id)) {
-            variedadPizzaRepository.deleteById(id);
+        if (catalogService.deleteVariedad(id)) {
             return ResponseEntity.ok().build();
         } else {
             return ResponseEntity.notFound().build();

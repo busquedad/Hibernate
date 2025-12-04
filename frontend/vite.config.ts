@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 // https:vite.devconfig
@@ -14,11 +14,12 @@ export default defineConfig({
       reporter: ['text', 'json', 'html', 'text-summary'],
       include: ['src/**'],
       exclude: ['src/main.tsx', 'src/vite-env.d.ts', 'src/test/**'],
-      all: true,
-      lines: 80,
-      functions: 80,
-      branches: 80,
-      statements: 80,
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
     },
   },
 })
