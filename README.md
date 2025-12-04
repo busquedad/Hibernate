@@ -4,6 +4,39 @@
 
 This document provides a comprehensive technical overview of the Pizza Management Dashboard, a full-stack application featuring a Java backend (powered by Spring Boot and Spring Security) and a React frontend. The focus of this documentation is on the security architecture, system design, and operational procedures.
 
+### 1.1. Technology Stack
+
+- **Backend:**
+  - Java 8
+  - Spring Boot 2.7.5
+  - Spring Security OAuth2 Authorization Server 0.4.0
+  - Spring Data JPA
+- **Frontend:**
+  - React (Vite)
+  - TypeScript
+  - Tailwind CSS
+- **Database:**
+  - H2 In-Memory Database
+
+### 1.2. Project Structure
+
+```
+.
+├── PizzaMDP/           # Spring Boot Backend
+│   └── src/main/java/
+│       └── com/pizzamdp/
+│           ├── config/         # Security (Auth Server, Resource Server)
+│           ├── controllers/    # API Endpoints
+│           ├── entities/       # JPA Entities
+│           └── repositories/   # Data Access Layer
+│
+└── frontend/               # React Frontend
+    └── src/
+        ├── components/     # React Components
+        ├── services/       # API integration
+        └── App.tsx         # Main application component
+```
+
 ## 2. Setup and Configuration
 
 ### 2.1. Prerequisites
@@ -34,6 +67,7 @@ ALLOWED_ORIGIN=http://localhost:5173
     ```
 4.  The **frontend** will be available at `http://localhost:5173`.
 5.  The **backend API** will be available at `http://localhost:8080`.
+6.  **API Documentation**: Note that this project does not include a Swagger/OpenAPI UI by default. API endpoints are documented within this README.
 
 ## 3. Security Architecture
 
@@ -237,3 +271,25 @@ This matrix outlines how the system responds to various security and functional 
 |               | 11| **Check Status of Non-existent Order**                  | `GET` request to `/oms/ordenes/status` with an invalid order ID. | The server cannot find the requested order.                            | `404 Not Found`    |
 | **Stock**     | 12| **Update Stock for Non-existent Item**                  | `PUT` request to `/stock` for a pizza variety ID that does not exist. | The server cannot find the item to update its stock.                   | `404 Not Found`    |
 |               | 13| **Set Negative Stock**                                  | `PUT` request to `/stock` with a negative value.               | The server validates the input and rejects the negative value.         | `400 Bad Request`  |
+
+## 7. Troubleshooting
+
+### 7.1. Port 8080 already in use
+
+- **Issue:** `docker-compose up` fails with an error indicating that port 8080 is already allocated.
+- **Solution:** Another service on your machine is using port 8080. You can either stop the conflicting service or change the port mapping in the `docker-compose.yml` file.
+  ```yaml
+  # In docker-compose.yml
+  services:
+    backend:
+      ports:
+        - "8081:8080" # Exposes the backend on port 8081 of the host
+  ```
+
+### 7.2. CORS Policy Error
+
+- **Issue:** The frontend fails to connect to the backend API, and the browser console shows a Cross-Origin Resource Sharing (CORS) error.
+- **Solution:** This usually means the `ALLOWED_ORIGIN` environment variable is not correctly configured.
+  1.  Ensure you have a `.env` file in the project root.
+  2.  Verify that the `ALLOWED_ORIGIN` value in the `.env` file matches the URL of the frontend (by default, `http://localhost:5173`).
+  3.  Rebuild and restart the Docker containers: `docker-compose up --build -d`.
