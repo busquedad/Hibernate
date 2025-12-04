@@ -281,7 +281,7 @@ The response will contain an `access_token`. You can decode it using a tool like
 }
 ```
 
-## 6. Application Edge Cases
+## 7. Application Edge Cases
 
 This matrix outlines how the system responds to various security and functional edge cases.
 
@@ -301,9 +301,9 @@ This matrix outlines how the system responds to various security and functional 
 | **Stock**     | 12| **Update Stock for Non-existent Item**                  | `PUT` request to `/stock` for a pizza variety ID that does not exist. | The server cannot find the item to update its stock.                   | `404 Not Found`    |
 |               | 13| **Set Negative Stock**                                  | `PUT` request to `/stock` with a negative value.               | The server validates the input and rejects the negative value.         | `400 Bad Request`  |
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
-### 7.1. Port 8080 already in use
+### 8.1. Port 8080 already in use
 
 - **Issue:** `docker-compose up` fails with an error indicating that port 8080 is already allocated.
 - **Solution:** Another service on your machine is using port 8080. You can either stop the conflicting service or change the port mapping in the `docker-compose.yml` file.
@@ -315,7 +315,7 @@ This matrix outlines how the system responds to various security and functional 
         - "8081:8080" # Exposes the backend on port 8081 of the host
   ```
 
-### 7.2. CORS Policy Error
+### 8.2. CORS Policy Error
 
 - **Issue:** The frontend fails to connect to the backend API, and the browser console shows a Cross-Origin Resource Sharing (CORS) error.
 - **Solution:** This usually means the `ALLOWED_ORIGIN` environment variable is not correctly configured.
