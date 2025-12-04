@@ -1,60 +1,71 @@
-
 package com.pizzamdp.config;
 
+import com.pizzamdp.services.CustomOidcUserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 /**
- * Configuración de seguridad para la autenticación de usuarios.
- * <p>
- * Esta clase define cómo la aplicación gestiona los detalles de los usuarios para la
- * autenticación. Para fines de demostración, utiliza un {@link UserDetailsService}
- * que almacena los usuarios en memoria. En un entorno de producción, esto debería ser
- * reemplazado por una implementación que se conecte a una base de datos de usuarios
- * (e.g., a través de JPA) u otro proveedor de identidades.
+ * Configuración de seguridad principal que gestiona la autenticación de usuarios
+ * a través de múltiples mecanismos (login con formulario y OAuth2/OIDC).
  */
 @Configuration
+@EnableWebSecurity
 public class DefaultSecurityConfig {
 
+    private final CustomOidcUserService customOidcUserService;
+
+    public DefaultSecurityConfig(CustomOidcUserService customOidcUserService) {
+        this.customOidcUserService = customOidcUserService;
+    }
+
     /**
-     * Crea un bean {@link UserDetailsService} con un conjunto de usuarios de prueba en memoria.
+     * Define el {@link SecurityFilterChain} principal que protege los endpoints.
      * <p>
-     * Este servicio es fundamental para que Spring Security pueda cargar los detalles de un
-     * usuario (incluyendo contraseña y roles) durante el proceso de autenticación. Aquí se definen
-     * dos usuarios:
+     * Configura lo siguiente:
      * <ul>
-     *     <li><b>admin</b>: Con el rol {@code ADMINISTRADOR}.</li>
-     *     <li><b>user</b>: Con el rol {@code USUARIO}.</li>
+     *     <li>Todas las peticiones deben ser autenticadas.</li>
+     *     <li>Habilita el login por formulario estándar ({@code formLogin}).</li>
+     *     <li>Habilita el login con OAuth2/OIDC ({@code oauth2Login}) para federación de identidades
+     *     (e.g., Google). Se conecta con un {@link CustomOidcUserService} para el provisionamiento
+     *     automático de usuarios.</li>
      * </ul>
-     * Las contraseñas se codifican utilizando el {@link PasswordEncoder} delegado de Spring,
-     * que soporta múltiples algoritmos de codificación y es la práctica recomendada.
      *
-     * @return Un {@link InMemoryUserDetailsManager} pre-poblado con los usuarios de demostración.
-     * @see UserDetailsService
-     * @see PasswordEncoderFactories#createDelegatingPasswordEncoder()
+     * @param http El objeto {@link HttpSecurity} para configurar.
+     * @return La cadena de filtros de seguridad construida.
+     * @throws Exception Si ocurre un error durante la configuración.
      */
     @Bean
-    public UserDetailsService userDetailsService() {
-        PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(authorize -> authorize
+                .anyRequest().authenticated()
+            )
+            .formLogin(withDefaults())
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
+                    .oidcUserService(customOidcUserService)
+                )
+            );
+        return http.build();
+    }
 
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password(encoder.encode("password"))
-                .roles("ADMINISTRADOR")
-                .build();
-
-        UserDetails user = User.builder()
-                .username("user")
-                .password(encoder.encode("password"))
-                .roles("USUARIO")
-                .build();
-
-        return new InMemoryUserDetailsManager(admin, user);
+    /**
+     * Proporciona un {@link PasswordEncoder} para la codificación y validación de contraseñas.
+     * <p>
+     * Utiliza el codificador delegado de Spring, que es la práctica recomendada por su
+     * flexibilidad y seguridad (soporta bcrypt por defecto).
+     *
+     * @return Una instancia de {@link PasswordEncoder}.
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 }

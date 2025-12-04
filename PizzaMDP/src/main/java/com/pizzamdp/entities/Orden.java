@@ -1,18 +1,17 @@
 package com.pizzamdp.entities;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -31,11 +30,13 @@ public class Orden {
     @Column(name = "id_orden")
     private Integer id;
 
-    @Column(name = "nombre_cliente", nullable = false)
-    private String nombreCliente;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_id", nullable = false)
+    private User cliente;
 
-    @Column(name = "direccion_cliente", nullable = false)
-    private String direccionCliente;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rider_id", nullable = true)
+    private User rider;
 
     @Column(name = "fecha_orden", nullable = false)
     private LocalDateTime fechaOrden;

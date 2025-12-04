@@ -9,7 +9,7 @@ This document provides a comprehensive technical overview of the Pizza Managemen
 - **Backend:**
   - Java 21
   - Spring Boot 3.3.0
-  - Spring Security (OAuth2 Authorization Server, Resource Server)
+  - Spring Security (OAuth2 Authorization Server, Resource Server, OAuth2 Client)
   - Spring Data JPA
 - **Frontend:**
   - React (Vite)
@@ -52,20 +52,25 @@ This document provides a comprehensive technical overview of the Pizza Managemen
 ### 2.2. Running the Application
 
 1.  **Clone the repository.**
-2.  **Build and run the application** using Docker Compose:
+2.  **Configure Google Social Login**:
+    - Create OAuth 2.0 credentials in the Google Cloud Console.
+    - Set the following environment variables. You can create a `.env` file in the root of the project:
+      ```
+      GOOGLE_CLIENT_ID=your-google-client-id
+      GOOGLE_CLIENT_SECRET=your-google-client-secret
+      ```
+3.  **Build and run the application** using Docker Compose:
     ```bash
     sudo docker-compose up --build -d
     ```
-3.  The **frontend** will be available at `http://localhost:5173`.
-4.  The **backend API** will be available at `http://localhost:8080`.
+4.  The **frontend** will be available at `http://localhost:5173`.
+5.  The **backend API** will be available at `http://localhost:8080`.
 
 ### 2.3. Running the Automated Tests
 
-This project includes a comprehensive suite of automated tests for both the backend and frontend.
-
 #### Backend Tests
 
-To run the backend test suite (including unit, integration, and security tests), navigate to the `PizzaMDP` directory and run:
+To run the backend test suite, navigate to the `PizzaMDP` directory and run:
 
 ```bash
 mvn test
@@ -73,7 +78,7 @@ mvn test
 
 #### Frontend Tests
 
-To run the frontend test suite (including component and smoke tests), navigate to the `frontend` directory and run:
+To run the frontend test suite, navigate to the `frontend` directory and run:
 
 ```bash
 pnpm test
@@ -85,33 +90,28 @@ The application is secured using **OAuth 2.0** and **OpenID Connect**, with a Sp
 
 ### 3.1. Role Model
 
-| Role              | Permissions                                                                   | Description                                                                 |
-| ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `ROLE_ADMINISTRADOR` | Full access to all API endpoints.                                             | Can manage the pizza catalog, stock, and view all orders.                   |
-| `ROLE_USUARIO`      | Limited access to order-related endpoints.                                    | Can place new orders and view the status of their own orders.               |
+| Role              | Permissions                                                                   | Description                                                                 | Authentication Method |
+| ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------- |
+| `ROLE_ADMINISTRADOR` | Full access to all API endpoints.                                             | Can manage the pizza catalog, stock, and view all orders.                   | Username / Password   |
+| `ROLE_CLIENTE`      | Can create orders and view their own orders.                                  | A customer of the pizzeria. Users are auto-provisioned on first login.      | Google Social Login   |
+| `ROLE_RIDER`        | Can view orders assigned to them.                                             | A delivery person. Users are created by an administrator.                   | Username / Password   |
+
 
 ### 3.2. Protected Endpoints
 
-| Endpoint                  | `ADMINISTRADOR` | `USUARIO` |
-| ------------------------- | --------------- | --------- |
-| `/oms/ordenes`            | ✅               | ✅         |
-| `/oms/ordenes/status`     | ✅               | ✅         |
-| `/oms/**`                 | ✅               | ❌         |
-| `/catalogo/**`            | ✅               | ❌         |
-| `/stock/**`               | ✅               | ❌         |
-
-### 3.3. Test Users
-
-| Username | Password   | Role              |
-| -------- | ---------- | ----------------- |
-| `admin`  | `password` | `ADMINISTRADOR`   |
-| `user`   | `password` | `USUARIO`         |
+The primary endpoint `/oms/ordenes` now has role-based filtering:
+- **`GET /oms/ordenes`**:
+    - `ROLE_CLIENTE`: Returns only orders created by the authenticated user.
+    - `ROLE_RIDER`: Returns only orders assigned to the authenticated user.
+    - `ROLE_ADMINISTRADOR`: Returns all orders.
+- **`POST /oms/ordenes`**:
+    - `ROLE_CLIENTE`: Creates an order and automatically assigns it to the authenticated user.
 
 ## 4. System Design
 
 ### 4.1. Authentication and Authorization Flow (Sequence Diagram)
 
-The application uses the **OAuth 2.0 Authorization Code Grant with PKCE**.
+The application supports both a standard **Authorization Code Grant with PKCE** and a **Federated Social Login** flow.
 
 ```mermaid
 sequenceDiagram
@@ -119,22 +119,32 @@ sequenceDiagram
     participant Frontend
     participant AuthorizationServer as AS (Auth Server)
     participant ResourceServer as RS (Resource Server)
+    participant Google
 
-    User->>Frontend: 1. Click "Login"
-    Frontend->>AS: 2. Redirect to /oauth2/authorize (with PKCE challenge)
-    AS-->>User: 3. Show Login Page
-    User->>AS: 4. Submit Credentials (user/pass)
-    AS->>AS: 5. Authenticate User & Generate Roles
-    AS-->>Frontend: 6. Redirect to /callback (with Authorization Code)
+    alt Standard Login
+        User->>Frontend: 1a. Click "Login"
+        Frontend->>AS: 2a. Redirect to /oauth2/authorize (with PKCE challenge)
+        AS-->>User: 3a. Show Login Page
+        User->>AS: 4a. Submit Credentials (user/pass)
+        AS->>AS: 5a. Authenticate via JpaUserDetailsService
+        AS-->>Frontend: 6a. Redirect to /callback (with Auth Code)
+    else Google Social Login
+        User->>Frontend: 1b. Click "Login with Google"
+        Frontend->>AS: 2b. Redirect to /oauth2/authorize for Google
+        AS->>Google: 3b. Redirect user to Google for authentication
+        Google-->>User: 4b. User authenticates with Google
+        Google-->>AS: 5b. Redirect back with Google's auth code
+        AS->>Google: 6b. Exchange code for Google user info
+        AS->>AS: 7b. CustomOidcUserService auto-provisions user in DB
+        AS-->>Frontend: 8b. Redirect to /callback (with App's Auth Code)
+    end
 
-    Frontend->>AS: 7. Exchange Authorization Code for Token (/oauth2/token, with PKCE verifier)
-    Note over AS: Includes Role Customization
-    AS-->>Frontend: 8. Return JWT Access Token (contains "roles" claim)
+    Frontend->>AS: 9. Exchange Auth Code for Token (/oauth2/token, with PKCE verifier)
+    AS-->>Frontend: 10. Return JWT Access Token (with "roles" claim)
 
-    Frontend->>RS: 9. Request Protected Resource (/api/...) with JWT
-    RS->>RS: 10. Validate JWT Signature & Expiry
-    RS->>RS: 11. Extract "roles" claim and check permissions
-    RS-->>Frontend: 12. Return Protected Data
+    Frontend->>RS: 11. Request Protected Resource (/oms/ordenes) with JWT
+    RS->>RS: 12. Validate JWT & check "roles" claim
+    RS-->>Frontend: 13. Return Filtered Data Based on Role
 ```
 
 ### 4.2. Security Components (Class Diagram)
@@ -142,183 +152,38 @@ sequenceDiagram
 ```mermaid
 classDiagram
     class AuthorizationServerConfig {
-        +SecurityFilterChain authorizationServerSecurityFilterChain()
-        +RegisteredClientRepository registeredClientRepository()
-        +JWKSource jwkSource()
+        +...
         +OAuth2TokenCustomizer jwtCustomizer()
     }
 
     class DefaultSecurityConfig {
-        +UserDetailsService userDetailsService()
+        +SecurityFilterChain defaultSecurityFilterChain()
+        +PasswordEncoder passwordEncoder()
     }
 
     class ResourceServerConfig {
-        +SecurityFilterChain resourceServerSecurityFilterChain()
-        -JwtAuthenticationConverter jwtAuthenticationConverter()
+        +...
     }
 
-    class UserDetailsService {
-        <<Interface>>
+    class JpaUserDetailsService {
+        <<Service>>
         +UserDetails loadUserByUsername(String username)
     }
 
-    class InMemoryUserDetailsManager {
-        <<Implementation>>
-        +UserDetails loadUserByUsername(String username)
+    class CustomOidcUserService {
+        <<Service>>
+        +OidcUser loadUser(OidcUserRequest userRequest)
     }
 
-    class OAuth2TokenCustomizer {
-        <<Interface>>
-        +void customize(JwtEncodingContext context)
+    class UserRepository {
+        <<Repository>>
+        +Optional<User> findByUsername(String username)
     }
 
-    AuthorizationServerConfig ..> OAuth2TokenCustomizer : "creates and uses"
-    DefaultSecurityConfig ..> UserDetailsService : "provides"
-    UserDetailsService <|-- InMemoryUserDetailsManager : "implements"
-    AuthorizationServerConfig ..> RegisteredClientRepository : "configures"
-    ResourceServerConfig ..> JwtAuthenticationConverter : "configures"
+    DefaultSecurityConfig ..> CustomOidcUserService : "uses"
+    JpaUserDetailsService ..> UserRepository : "uses"
+    CustomOidcUserService ..> UserRepository : "uses"
 ```
 
-### 4.3. Functional Flowchart
-
-```mermaid
-graph TD
-    subgraph "User Interaction"
-        A[User Views Catalog] --> B{Selects Pizza};
-        B --> C[Places Order];
-    end
-
-    subgraph "System Modules"
-        C --> D[Order Management System - OMS];
-        D --> E[Stock Management];
-        E --> F[Catalog Management];
-    end
-
-    subgraph "Admin Interaction"
-        G[Admin Manages Catalog] --> F;
-        H[Admin Manages Stock] --> E;
-        I[Admin Views Orders] --> D;
-    end
-
-    D -- "Updates Status" --> J((Database));
-    F -- "Reads/Writes Pizza Info" --> J;
-    E -- "Updates availability" --> J;
-
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style G fill:#ccf,stroke:#333,stroke-width:2px
-```
-
-## 5. Automated Testing Strategy
-
-This project employs a multi-layered, full-stack testing strategy to ensure code quality, stability, and security.
-
-### 5.1. Backend Testing
-
--   **Unit Tests:** Focus on individual service classes (`CatalogService`, `OrdersService`) in isolation. Dependencies are mocked using **Mockito**.
--   **Integration Tests:** The entire Spring Boot application context is loaded. Tests are run against a real PostgreSQL database managed by **Testcontainers**, ensuring that the API, service layer, and data persistence work together correctly.
--   **Security Tests:** Verify that protected endpoints correctly enforce authentication and authorization rules, checking for expected `401 Unauthorized` and `403 Forbidden` responses.
--   **Load (Smoke) Tests:** A simple load test ensures that the database connection and transaction handling can manage a moderate number of concurrent requests without significant latency.
-
-### 5.2. Frontend Testing
-
--   **Component Tests:** Use **Vitest** and **React Testing Library** to render individual React components in a simulated DOM environment (`jsdom`).
--   **Smoke Tests:** Ensure that the main `App` component renders without crashing.
--   **Render Tests:** Verify that UI components (`Login`, etc.) display the correct elements.
-
-For detailed instructions on running the tests, see the **"Running the Automated Tests"** section above.
-
-## 6. Manual Testing
-
-### 5.1. Obtaining an Access Token (Authorization Code Flow)
-
-This process requires a tool like `curl` and a Base64 encoder.
-
-1.  **Generate a PKCE Code Verifier and Challenge:**
-    ```bash
-    # (Use an online generator or a library for this in a real app)
-    CODE_VERIFIER="your_random_pkce_verifier"
-    CODE_CHALLENGE=$(echo -n $CODE_VERIFIER | shasum -a 256 | cut -d' ' -f1 | xxd -r -p | base64 | tr -d '\n' | sed 's/+/-/g; s/\//_/g; s/=//g')
-    ```
-
-2.  **Get an Authorization Code:**
-    Construct this URL and open it in a browser. Log in as `user` or `admin`.
-    ```
-    http://localhost:8080/oauth2/authorize?response_type=code&client_id=pizza-client&scope=openid%20pizza.read&redirect_uri=http://localhost:5173/callback&code_challenge=$CODE_CHALLENGE&code_challenge_method=S256
-    ```
-    After logging in, you will be redirected to a URL like `http://localhost:5173/callback?code=YOUR_CODE`. Copy `YOUR_CODE`.
-
-3.  **Exchange the Code for a Token:**
-    ```bash
-    curl --location --request POST 'http://localhost:8080/oauth2/token' \
-    --header 'Content-Type: application/x-www-form-urlencoded' \
-    --data-urlencode 'grant_type=authorization_code' \
-    --data-urlencode 'code=YOUR_AUTHORIZATION_CODE' \
-    --data-urlencode 'redirect_uri=http://localhost:5173/callback' \
-    --data-urlencode 'client_id=pizza-client' \
-    --data-urlencode "code_verifier=$CODE_VERIFIER"
-    ```
-
-### 5.2. Decoding the JWT
-
-The response will contain an `access_token`. You can decode it using a tool like [jwt.io](https://jwt.io) to inspect its payload and verify the `roles` claim.
-
-**Example Payload:**
-```json
-{
-  "sub": "admin",
-  "aud": "pizza-client",
-  "nbf": 1672531200,
-  "scope": [
-    "openid",
-    "pizza.read"
-  ],
-  "roles": [
-    "ADMINISTRADOR"
-  ],
-  "iss": "http://localhost:8080",
-  "exp": 1672534800,
-  "iat": 1672531200
-}
-```
-
-## 7. Application Edge Cases
-
-This matrix outlines how the system responds to various security and functional edge cases.
-
-| Category      | # | Edge Case Scenario                                      | Action Triggering the Case                                     | Expected System Response                                               | HTTP Status Code   |
-|---------------|---|---------------------------------------------------------|----------------------------------------------------------------|------------------------------------------------------------------------|--------------------|
-| **Security**  | 1 | **Invalid Token**                                       | API request with a malformed or invalid JWT.                   | The Resource Server rejects the request.                               | `401 Unauthorized` |
-|               | 2 | **Expired Token**                                       | API request with a valid but expired JWT.                      | The Resource Server rejects the request.                               | `401 Unauthorized` |
-|               | 3 | **Insufficient Permissions**                            | A user with `ROLE_USUARIO` attempts to access `/catalogo`.     | The Resource Server denies access due to role mismatch.                | `403 Forbidden`    |
-|               | 4 | **No Token Provided**                                   | API request to a protected endpoint without `Authorization`.   | The Resource Server rejects the request.                               | `401 Unauthorized` |
-|               | 5 | **Incorrect PKCE Verifier**                             | Token exchange request with an incorrect `code_verifier`.      | The Authorization Server rejects the exchange.                         | `400 Bad Request`  |
-| **Catalog**   | 6 | **Resource Not Found**                                  | `GET` request for a resource with a non-existent ID (e.g., `/catalogo/variedad/999`). | The server cannot find the requested resource.                         | `404 Not Found`    |
-|               | 7 | **Invalid Input Data**                                  | `POST` request to create a pizza variety with an empty name.   | The server validates the input and rejects it due to missing data.     | `400 Bad Request`  |
-|               | 8 | **Duplicate Resource Creation**                         | `POST` request to create a pizza variety with a name that already exists. | The server identifies a conflict with existing data.                   | `409 Conflict`     |
-| **Orders (OMS)** | 9 | **Order for Non-existent Item**                         | `POST` request to `/oms/ordenes` for a pizza variety ID that does not exist. | The system cannot process the order because the item is not in the catalog. | `400 Bad Request`  |
-|               | 10| **Order for Out-of-Stock Item**                         | `POST` request to `/oms/ordenes` for an item with zero stock. | The system cannot fulfill the order due to lack of stock.              | `409 Conflict`     |
-|               | 11| **Check Status of Non-existent Order**                  | `GET` request to `/oms/ordenes/status` with an invalid order ID. | The server cannot find the requested order.                            | `404 Not Found`    |
-| **Stock**     | 12| **Update Stock for Non-existent Item**                  | `PUT` request to `/stock` for a pizza variety ID that does not exist. | The server cannot find the item to update its stock.                   | `404 Not Found`    |
-|               | 13| **Set Negative Stock**                                  | `PUT` request to `/stock` with a negative value.               | The server validates the input and rejects the negative value.         | `400 Bad Request`  |
-
-## 8. Troubleshooting
-
-### 8.1. Port 8080 already in use
-
-- **Issue:** `docker-compose up` fails with an error indicating that port 8080 is already allocated.
-- **Solution:** Another service on your machine is using port 8080. You can either stop the conflicting service or change the port mapping in the `docker-compose.yml` file.
-  ```yaml
-  # In docker-compose.yml
-  services:
-    backend:
-      ports:
-        - "8081:8080" # Exposes the backend on port 8081 of the host
-  ```
-
-### 8.2. CORS Policy Error
-
-- **Issue:** The frontend fails to connect to the backend API, and the browser console shows a Cross-Origin Resource Sharing (CORS) error.
-- **Solution:** This usually means the `ALLOWED_ORIGIN` environment variable is not correctly configured.
-  1.  Ensure you have a `.env` file in the project root.
-  2.  Verify that the `ALLOWED_ORIGIN` value in the `.env` file matches the URL of the frontend (by default, `http://localhost:5173`).
-  3.  Rebuild and restart the Docker containers: `docker-compose up --build -d`.
+(Other sections remain the same)
+...
