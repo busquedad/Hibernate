@@ -1,5 +1,18 @@
 version: '3.8'
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pizzamdp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pizza-net
+    ports:
+      - "5432:5432"
+
   backend:
     build: ./PizzaMDP
     ports:
@@ -8,6 +21,8 @@ services:
       - ./data_persistence:/app/data
     networks:
       - pizza-net
+    depends_on:
+      - db
 
   frontend:
     build: ./frontend
@@ -20,3 +35,6 @@ services:
 
 networks:
   pizza-net:
+
+volumes:
+  postgres_data:
