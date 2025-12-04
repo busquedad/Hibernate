@@ -1,54 +1,35 @@
 package com.pizzamdp.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Configuración de seguridad para el Servidor de Recursos (Resource Server).
- * <p>
- * Esta clase es responsable de proteger los endpoints de la API. Define las reglas de
- * autorización (qué roles pueden acceder a qué rutas) y configura cómo el servidor debe
- * validar e interpretar los tokens de acceso JWT presentados por los clientes.
- *
- * @see org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
- * @see <a href="https://tools.ietf.org/html/rfc8259" target="_blank">OAuth 2.0 for Native Apps</a>
- */
+import java.util.Arrays;
+
 @Configuration
 public class ResourceServerConfig {
 
-    /**
-     * Define y configura el filtro de seguridad para el Servidor de Recursos.
-     * <p>
-     * Este filtro, con prioridad {@code @Order(2)}, se aplica a todas las solicitudes que
-     * no fueron manejadas por el filtro del Servidor de Autorización. Sus responsabilidades
-     * principales son:
-     * <ul>
-     *     <li>Deshabilitar CSRF, ya que la autenticación es sin estado (basada en tokens).</li>
-     *     <li>Definir reglas de autorización específicas para las rutas de la API, utilizando
-     *         expresiones de seguridad basadas en roles (e.g., {@code hasRole('ADMINISTRADOR')}).</li>
-     *     <li>Configurar el servidor para que valide tokens JWT como mecanismo de autenticación.</li>
-     *     <li>Registrar un {@link JwtAuthenticationConverter} para mapear los claims del JWT a
-     *         autoridades de Spring Security.</li>
-     * </ul>
-     *
-     * @param http El constructor de seguridad HTTP para configurar el {@link SecurityFilterChain}.
-     * @return Una instancia de {@link SecurityFilterChain} configurada para el servidor de recursos.
-     * @throws Exception Si ocurre un error durante la configuración de la seguridad.
-     */
+    @Value("${cors.allowed-origin:http://localhost:5173}")
+    private String allowedOrigin;
+
     @Bean
     @Order(2)
     public SecurityFilterChain resourceServerSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors().and()
-            .csrf().disable()
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authorize -> authorize
-                .antMatchers("/oms/ordenes", "/oms/ordenes/status").hasAnyRole("USUARIO", "ADMINISTRADOR")
-                .antMatchers("/oms/**", "/catalogo/**", "/stock/**").hasRole("ADMINISTRADOR")
+                .requestMatchers("/oms/ordenes", "/oms/ordenes/status").hasAnyRole("USUARIO", "ADMINISTRADOR")
+                .requestMatchers("/oms/**", "/catalogo/**", "/stock/**").hasRole("ADMINISTRADOR")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(
@@ -57,21 +38,6 @@ public class ResourceServerConfig {
         return http.build();
     }
 
-    /**
-     * Crea un convertidor personalizado para extraer las autoridades (roles) de un token JWT.
-     * <p>
-     * Spring Security necesita saber cómo mapear la información de un JWT a su modelo de
-     * seguridad interno ({@code GrantedAuthority}). Este convertidor se configura para:
-     * <ol>
-     *     <li>Leer el claim personalizado "roles" del JWT, que fue inyectado por el
-     *         {@code OAuth2TokenCustomizer} en el Servidor de Autorización.</li>
-     *     <li>Añadir el prefijo "ROLE_" a cada rol extraído. Este prefijo es una convención
-     *         de Spring Security para que las expresiones como {@code hasRole()} funcionen
-     *         correctamente.</li>
-     * </ol>
-     *
-     * @return Un {@link JwtAuthenticationConverter} configurado para la aplicación.
-     */
     private JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
         jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
@@ -81,5 +47,16 @@ public class ResourceServerConfig {
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
 
         return jwtAuthenticationConverter;
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigin));
+        configuration.setAllowedMethods(Arrays.asList("GET","POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

@@ -34,15 +34,16 @@ public class TipoPizzaController {
 
     @PutMapping("/{id}")
     public ResponseEntity<TipoPizza> updateTipoPizza(@PathVariable Integer id, @RequestBody TipoPizza tipoPizzaDetails) {
-        Optional<TipoPizza> tipoPizzaOptional = tipoPizzaRepository.findById(id);
-        if (tipoPizzaOptional.isPresent()) {
-            TipoPizza tipoPizza = tipoPizzaOptional.get();
-            tipoPizza.setNombre(tipoPizzaDetails.getNombre());
-            tipoPizza.setDescripcionPizza(tipoPizzaDetails.getDescripcionPizza());
-            return ResponseEntity.ok(tipoPizzaRepository.save(tipoPizza));
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return tipoPizzaRepository.findById(id)
+                .map(existingTipo -> {
+                    TipoPizza updatedTipo = new TipoPizza(
+                            existingTipo.id_tipo_pizza(),
+                            tipoPizzaDetails.nombre(),
+                            tipoPizzaDetails.descripcionPizza()
+                    );
+                    return ResponseEntity.ok(tipoPizzaRepository.save(updatedTipo));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")

@@ -34,15 +34,16 @@ public class TamanioPizzaController {
 
     @PutMapping("/{id}")
     public ResponseEntity<TamanioPizza> updateTamanioPizza(@PathVariable Integer id, @RequestBody TamanioPizza tamanioPizzaDetails) {
-        Optional<TamanioPizza> tamanioPizzaOptional = tamanioPizzaRepository.findById(id);
-        if (tamanioPizzaOptional.isPresent()) {
-            TamanioPizza tamanioPizza = tamanioPizzaOptional.get();
-            tamanioPizza.setNombre(tamanioPizzaDetails.getNombre());
-            tamanioPizza.setCant_porciones(tamanioPizzaDetails.getCant_porciones());
-            return ResponseEntity.ok(tamanioPizzaRepository.save(tamanioPizza));
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return tamanioPizzaRepository.findById(id)
+                .map(existingTamanio -> {
+                    TamanioPizza updatedTamanio = new TamanioPizza(
+                            existingTamanio.id_tamanio_pizza(),
+                            tamanioPizzaDetails.nombre(),
+                            tamanioPizzaDetails.cant_porciones()
+                    );
+                    return ResponseEntity.ok(tamanioPizzaRepository.save(updatedTamanio));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
