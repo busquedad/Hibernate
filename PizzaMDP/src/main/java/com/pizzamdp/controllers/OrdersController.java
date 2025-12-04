@@ -4,7 +4,7 @@ import com.pizzamdp.entities.Orden;
 import com.pizzamdp.entities.User;
 import com.pizzamdp.messaging.config.RabbitConfig;
 import com.pizzamdp.messaging.dto.OrderCreateEvent;
-import com.pizzamdp.security.CustomOidcUser;
+import com.pizzamdp.security.oidc.CustomOidcUser;
 import com.pizzamdp.services.OrdersService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -28,6 +28,7 @@ public class ResourceServerConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/ws-pizza/**").permitAll()
                 .requestMatchers("/oms/ordenes", "/oms/ordenes/status").hasAnyRole("USUARIO", "ADMINISTRADOR")
                 .requestMatchers("/oms/**", "/catalogo/**", "/stock/**").hasRole("ADMINISTRADOR")
                 .anyRequest().authenticated()
@@ -38,7 +39,8 @@ public class ResourceServerConfig {
         return http.build();
     }
 
-    private JwtAuthenticationConverter jwtAuthenticationConverter() {
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
         jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
         jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
