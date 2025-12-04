@@ -18,6 +18,8 @@ This document provides a comprehensive technical overview of the Pizza Managemen
 - **Database:**
   - PostgreSQL 16
   - Flyway (Schema Versioning)
+- **Messaging:**
+  - RabbitMQ 3.13
 - **Testing:**
   - **Backend:** JUnit 5, Mockito, Testcontainers, REST Assured
   - **Frontend:** Vitest, React Testing Library
@@ -65,6 +67,7 @@ This document provides a comprehensive technical overview of the Pizza Managemen
     ```
 4.  The **frontend** will be available at `http://localhost:5173`.
 5.  The **backend API** will be available at `http://localhost:8080`.
+6.  The **RabbitMQ Management UI** will be available at `http://localhost:15672` (user: `user`, pass: `password`).
 
 ### 2.3. Running the Automated Tests
 
@@ -145,6 +148,8 @@ sequenceDiagram
     Frontend->>RS: 11. Request Protected Resource (/oms/ordenes) with JWT
     RS->>RS: 12. Validate JWT & check "roles" claim
     RS-->>Frontend: 13. Return Filtered Data Based on Role
+
+    note over Frontend, RS: For POST /oms/ordenes, the response is now HTTP 202 Accepted. See async flow below.
 ```
 
 ### 4.2. Security Components (Class Diagram)
@@ -183,6 +188,31 @@ classDiagram
     DefaultSecurityConfig ..> CustomOidcUserService : "uses"
     JpaUserDetailsService ..> UserRepository : "uses"
     CustomOidcUserService ..> UserRepository : "uses"
+```
+
+### 4.3. Asynchronous Order Creation Flow (Sequence Diagram)
+
+To handle high concurrency and improve system resilience, the order creation process is now asynchronous.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant ResourceServer as RS (Backend)
+    participant RabbitMQ
+    participant OrderProcessingConsumer as Consumer
+    participant Database
+
+    User->>Frontend: 1. Submits New Order
+    Frontend->>RS: 2. POST /oms/ordenes (with Order data in body)
+    RS->>RS: 3. Validate Request & Set Client Info
+    RS->>RabbitMQ: 4. Publish `OrderCreateEvent` to `orders.exchange`
+    RS-->>Frontend: 5. Immediately return HTTP 202 Accepted
+    Frontend-->>User: 6. Show "Order is being processed" message
+
+    RabbitMQ->>Consumer: 7. Deliver Message from `orders.create.queue`
+    Consumer->>Database: 8. Persist Order in a Transaction
+    Consumer->>RabbitMQ: 9. Acknowledge Message
 ```
 
 (Other sections remain the same)
