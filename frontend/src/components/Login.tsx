@@ -2,8 +2,8 @@ import React from 'react';
 import pkceChallenge from 'pkce-challenge';
 
 const Login: React.FC = () => {
-    const handleLogin = () => {
-        const challenge = pkceChallenge();
+    const handleLogin = async () => {
+        const challenge = await pkceChallenge();
         sessionStorage.setItem('code_verifier', challenge.code_verifier);
 
         const clientId = import.meta.env.VITE_CLIENT_ID;

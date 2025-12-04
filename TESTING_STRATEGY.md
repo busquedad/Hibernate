@@ -48,3 +48,22 @@ mvn test
 ```
 
 Esto ejecutará todas las pruebas (unitarias, de integración, de seguridad y de carga) y generará un informe de los resultados.
+
+### 5. Pruebas de Frontend
+
+- **Objetivo:** Garantizar la calidad y estabilidad de la interfaz de usuario de React.
+- **Frameworks:** Vitest, React Testing Library, jsdom.
+- **Ubicación:** `frontend/src/**/*.test.tsx`
+- **Descripción:** Las pruebas de frontend se centran en verificar que los componentes de React se renderizan correctamente y se comportan como se espera en un entorno de navegador simulado.
+    - **Smoke Tests:** Se utilizan para asegurar que los componentes principales (como `App.tsx`) se montan sin errores.
+    - **Component Tests:** Pruebas más específicas que verifican la presencia de elementos clave en la interfaz de usuario (ej. campos de formulario, botones).
+
+#### Cómo Ejecutar las Pruebas de Frontend
+
+Para ejecutar la suite de pruebas de frontend, navegue al directorio `frontend` y ejecute el siguiente comando:
+
+```bash
+pnpm test
+```
+
+Esto ejecutará todas las pruebas de componentes y generará un informe de los resultados, incluyendo la cobertura de código.
