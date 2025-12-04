@@ -190,9 +190,9 @@ classDiagram
     CustomOidcUserService ..> UserRepository : "uses"
 ```
 
-### 4.3. Asynchronous Order Creation Flow (Sequence Diagram)
+### 4.3. Full Asynchronous Flow with Real-Time Notification
 
-To handle high concurrency and improve system resilience, the order creation process is now asynchronous.
+The order creation process is fully asynchronous to ensure resilience and scalability. The frontend is notified of the final order status via WebSockets.
 
 ```mermaid
 sequenceDiagram
@@ -201,18 +201,25 @@ sequenceDiagram
     participant ResourceServer as RS (Backend)
     participant RabbitMQ
     participant OrderProcessingConsumer as Consumer
+    participant WebSocketBroker as WS Broker
     participant Database
 
-    User->>Frontend: 1. Submits New Order
-    Frontend->>RS: 2. POST /oms/ordenes (with Order data in body)
-    RS->>RS: 3. Validate Request & Set Client Info
-    RS->>RabbitMQ: 4. Publish `OrderCreateEvent` to `orders.exchange`
-    RS-->>Frontend: 5. Immediately return HTTP 202 Accepted
-    Frontend-->>User: 6. Show "Order is being processed" message
+    User->>Frontend: 1. Connects via WebSocket on page load
+    WS Broker-->>Frontend: WebSocket connection established
 
-    RabbitMQ->>Consumer: 7. Deliver Message from `orders.create.queue`
-    Consumer->>Database: 8. Persist Order in a Transaction
+    User->>Frontend: 2. Submits New Order
+    Frontend->>RS: 3. POST /oms/ordenes (Order data)
+    RS->>RabbitMQ: 4. Publish `OrderCreateEvent`
+    RS-->>Frontend: 5. Return HTTP 202 Accepted
+    Frontend-->>User: 6. Show "Processing request..." message
+
+    RabbitMQ->>Consumer: 7. Deliver Message
+    Consumer->>Database: 8. Persist Order
     Consumer->>RabbitMQ: 9. Acknowledge Message
+
+    Consumer->>WS Broker: 10. Send Order confirmation to topic/queue
+    WS Broker->>Frontend: 11. Push message to subscribed client
+    Frontend->>User: 12. Update UI with Toast & add to list
 ```
 
 (Other sections remain the same)
