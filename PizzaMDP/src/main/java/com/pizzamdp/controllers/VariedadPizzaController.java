@@ -34,15 +34,16 @@ public class VariedadPizzaController {
 
     @PutMapping("/{id}")
     public ResponseEntity<VariedadPizza> updateVariedadPizza(@PathVariable Integer id, @RequestBody VariedadPizza variedadPizzaDetails) {
-        Optional<VariedadPizza> variedadPizzaOptional = variedadPizzaRepository.findById(id);
-        if (variedadPizzaOptional.isPresent()) {
-            VariedadPizza variedadPizza = variedadPizzaOptional.get();
-            variedadPizza.setNombre(variedadPizzaDetails.getNombre());
-            variedadPizza.setIngredientes(variedadPizzaDetails.getIngredientes());
-            return ResponseEntity.ok(variedadPizzaRepository.save(variedadPizza));
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return variedadPizzaRepository.findById(id)
+                .map(existingVariedad -> {
+                    VariedadPizza updatedVariedad = new VariedadPizza(
+                            existingVariedad.id_variedad_pizza(),
+                            variedadPizzaDetails.nombre(),
+                            variedadPizzaDetails.ingredientes()
+                    );
+                    return ResponseEntity.ok(variedadPizzaRepository.save(updatedVariedad));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")

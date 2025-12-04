@@ -10,7 +10,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
 
 import java.util.Arrays;
@@ -36,12 +36,8 @@ public class TamanioPizzaControllerTest {
     @Test
     @WithMockUser
     public void getAllTamanioPizzas_shouldReturnListOfPizzas() throws Exception {
-        TamanioPizza pizza1 = new TamanioPizza();
-        pizza1.setId_tamanio_pizza(1);
-        pizza1.setNombre("Chica");
-        TamanioPizza pizza2 = new TamanioPizza();
-        pizza2.setId_tamanio_pizza(2);
-        pizza2.setNombre("Grande");
+        TamanioPizza pizza1 = new TamanioPizza(1, "Chica", 4);
+        TamanioPizza pizza2 = new TamanioPizza(2, "Grande", 8);
 
         when(tamanioPizzaRepository.findAll()).thenReturn(Arrays.asList(pizza1, pizza2));
 
@@ -55,9 +51,7 @@ public class TamanioPizzaControllerTest {
     @Test
     @WithMockUser
     public void getTamanioPizzaById_shouldReturnPizza() throws Exception {
-        TamanioPizza pizza = new TamanioPizza();
-        pizza.setId_tamanio_pizza(1);
-        pizza.setNombre("Chica");
+        TamanioPizza pizza = new TamanioPizza(1, "Chica", 4);
 
         when(tamanioPizzaRepository.findById(1)).thenReturn(Optional.of(pizza));
 
@@ -69,9 +63,7 @@ public class TamanioPizzaControllerTest {
     @Test
     @WithMockUser
     public void createTamanioPizza_shouldCreatePizza() throws Exception {
-        TamanioPizza pizza = new TamanioPizza();
-        pizza.setId_tamanio_pizza(1);
-        pizza.setNombre("Chica");
+        TamanioPizza pizza = new TamanioPizza(1, "Chica", 4);
 
         when(tamanioPizzaRepository.save(any(TamanioPizza.class))).thenReturn(pizza);
 
@@ -85,13 +77,8 @@ public class TamanioPizzaControllerTest {
     @Test
     @WithMockUser
     public void updateTamanioPizza_shouldUpdatePizza() throws Exception {
-        TamanioPizza pizza = new TamanioPizza();
-        pizza.setId_tamanio_pizza(1);
-        pizza.setNombre("Chica");
-
-        TamanioPizza updatedPizza = new TamanioPizza();
-        updatedPizza.setId_tamanio_pizza(1);
-        updatedPizza.setNombre("Chica Nueva");
+        TamanioPizza pizza = new TamanioPizza(1, "Chica", 4);
+        TamanioPizza updatedPizza = new TamanioPizza(1, "Chica Nueva", 5);
 
         when(tamanioPizzaRepository.findById(1)).thenReturn(Optional.of(pizza));
         when(tamanioPizzaRepository.save(any(TamanioPizza.class))).thenReturn(updatedPizza);
