@@ -7,16 +7,20 @@ This document provides a comprehensive technical overview of the Pizza Managemen
 ### 1.1. Technology Stack
 
 - **Backend:**
-  - Java 8
-  - Spring Boot 2.7.5
-  - Spring Security OAuth2 Authorization Server 0.4.0
+  - Java 21
+  - Spring Boot 3.3.0
+  - Spring Security (OAuth2 Authorization Server, Resource Server)
   - Spring Data JPA
 - **Frontend:**
   - React (Vite)
   - TypeScript
   - Tailwind CSS
 - **Database:**
-  - H2 In-Memory Database
+  - PostgreSQL 16
+  - Flyway (Schema Versioning)
+- **Testing:**
+  - **Backend:** JUnit 5, Mockito, Testcontainers, REST Assured
+  - **Frontend:** Vitest, React Testing Library
 
 ### 1.2. Project Structure
 
@@ -25,8 +29,9 @@ This document provides a comprehensive technical overview of the Pizza Managemen
 ├── PizzaMDP/           # Spring Boot Backend
 │   └── src/main/java/
 │       └── com/pizzamdp/
-│           ├── config/         # Security (Auth Server, Resource Server)
+│           ├── config/         # Security & App Configuration
 │           ├── controllers/    # API Endpoints
+│           ├── services/       # Business Logic
 │           ├── entities/       # JPA Entities
 │           └── repositories/   # Data Access Layer
 │
@@ -44,30 +49,35 @@ This document provides a comprehensive technical overview of the Pizza Managemen
 - Docker
 - Docker Compose
 
-### 2.2. Environment Variables
-
-The application is configured via environment variables. Create a `.env` file in the root directory with the following content:
-
-```env
-# The OAuth2 Client ID used by the frontend to identify itself to the Authorization Server.
-# This value is shared with the frontend application.
-SECURITY_OAUTH2_CLIENT_ID=pizza-client
-
-# The allowed origin for CORS requests. This should be the URL of your frontend application.
-ALLOWED_ORIGIN=http://localhost:5173
-```
-
-### 2.3. Running the Application
+### 2.2. Running the Application
 
 1.  **Clone the repository.**
-2.  **Create the `.env` file** as described above.
-3.  **Build and run the application** using Docker Compose:
+2.  **Build and run the application** using Docker Compose:
     ```bash
-    docker-compose up --build -d
+    sudo docker-compose up --build -d
     ```
-4.  The **frontend** will be available at `http://localhost:5173`.
-5.  The **backend API** will be available at `http://localhost:8080`.
-6.  **API Documentation**: Note that this project does not include a Swagger/OpenAPI UI by default. API endpoints are documented within this README.
+3.  The **frontend** will be available at `http://localhost:5173`.
+4.  The **backend API** will be available at `http://localhost:8080`.
+
+### 2.3. Running the Automated Tests
+
+This project includes a comprehensive suite of automated tests for both the backend and frontend.
+
+#### Backend Tests
+
+To run the backend test suite (including unit, integration, and security tests), navigate to the `PizzaMDP` directory and run:
+
+```bash
+mvn test
+```
+
+#### Frontend Tests
+
+To run the frontend test suite (including component and smoke tests), navigate to the `frontend` directory and run:
+
+```bash
+pnpm test
+```
 
 ## 3. Security Architecture
 
@@ -198,7 +208,26 @@ graph TD
     style G fill:#ccf,stroke:#333,stroke-width:2px
 ```
 
-## 5. Manual Testing
+## 5. Automated Testing Strategy
+
+This project employs a multi-layered, full-stack testing strategy to ensure code quality, stability, and security.
+
+### 5.1. Backend Testing
+
+-   **Unit Tests:** Focus on individual service classes (`CatalogService`, `OrdersService`) in isolation. Dependencies are mocked using **Mockito**.
+-   **Integration Tests:** The entire Spring Boot application context is loaded. Tests are run against a real PostgreSQL database managed by **Testcontainers**, ensuring that the API, service layer, and data persistence work together correctly.
+-   **Security Tests:** Verify that protected endpoints correctly enforce authentication and authorization rules, checking for expected `401 Unauthorized` and `403 Forbidden` responses.
+-   **Load (Smoke) Tests:** A simple load test ensures that the database connection and transaction handling can manage a moderate number of concurrent requests without significant latency.
+
+### 5.2. Frontend Testing
+
+-   **Component Tests:** Use **Vitest** and **React Testing Library** to render individual React components in a simulated DOM environment (`jsdom`).
+-   **Smoke Tests:** Ensure that the main `App` component renders without crashing.
+-   **Render Tests:** Verify that UI components (`Login`, etc.) display the correct elements.
+
+For detailed instructions on running the tests, see the **"Running the Automated Tests"** section above.
+
+## 6. Manual Testing
 
 ### 5.1. Obtaining an Access Token (Authorization Code Flow)
 
@@ -252,7 +281,7 @@ The response will contain an `access_token`. You can decode it using a tool like
 }
 ```
 
-## 6. Application Edge Cases
+## 7. Application Edge Cases
 
 This matrix outlines how the system responds to various security and functional edge cases.
 
@@ -272,9 +301,9 @@ This matrix outlines how the system responds to various security and functional 
 | **Stock**     | 12| **Update Stock for Non-existent Item**                  | `PUT` request to `/stock` for a pizza variety ID that does not exist. | The server cannot find the item to update its stock.                   | `404 Not Found`    |
 |               | 13| **Set Negative Stock**                                  | `PUT` request to `/stock` with a negative value.               | The server validates the input and rejects the negative value.         | `400 Bad Request`  |
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
-### 7.1. Port 8080 already in use
+### 8.1. Port 8080 already in use
 
 - **Issue:** `docker-compose up` fails with an error indicating that port 8080 is already allocated.
 - **Solution:** Another service on your machine is using port 8080. You can either stop the conflicting service or change the port mapping in the `docker-compose.yml` file.
@@ -286,7 +315,7 @@ This matrix outlines how the system responds to various security and functional 
         - "8081:8080" # Exposes the backend on port 8081 of the host
   ```
 
-### 7.2. CORS Policy Error
+### 8.2. CORS Policy Error
 
 - **Issue:** The frontend fails to connect to the backend API, and the browser console shows a Cross-Origin Resource Sharing (CORS) error.
 - **Solution:** This usually means the `ALLOWED_ORIGIN` environment variable is not correctly configured.
