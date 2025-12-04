@@ -1,70 +1,66 @@
 package com.pizzamdp.integration;
 
-import com.pizzamdp.entities.Orden;
-import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
-import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
-import static io.restassured.RestAssured.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
+
 @ActiveProfiles("test")
+@AutoConfigureMockMvc
+@Transactional
 public class OrdersIntegrationTest extends AbstractIntegrationTest {
 
-    @LocalServerPort
-    private int port;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @BeforeEach
-    void setUp() {
-        RestAssured.port = port;
-    }
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
-    @WithMockUser(username="user", roles={"USER"})
-    void testCreateAndGetOrder() {
+    @WithMockUser(username = "user", roles = {"USUARIO", "ADMINISTRADOR"})
+    void testCreateAndGetOrder() throws Exception {
         // Test data
         String orderJson = "{ \"nombreCliente\": \"Integration Test\", \"direccionCliente\": \"Test Address\", \"estadoOrden\": \"PENDIENTE\" }";
 
         // Create order
-        given()
-            .contentType(ContentType.JSON)
-            .body(orderJson)
-        .when()
-            .post("/oms/ordenes")
-        .then()
-            .statusCode(200)
-            .body("id", notNullValue())
-            .body("nombreCliente", equalTo("Integration Test"));
+        mockMvc.perform(post("/oms/ordenes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(orderJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", notNullValue()))
+                .andExpect(jsonPath("$.nombreCliente", equalTo("Integration Test")));
 
         // Verify it was saved
-        given()
-        .when()
-            .get("/oms/ordenes")
-        .then()
-            .statusCode(200)
-            .body("size()", equalTo(1))
-            .body("[0].nombreCliente", equalTo("Integration Test"));
+        mockMvc.perform(get("/oms/ordenes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()", equalTo(1)))
+                .andExpect(jsonPath("$[0].nombreCliente", equalTo("Integration Test")));
     }
 
     @Test
-    @WithMockUser(username="user", roles={"USER"})
-    void testLoadTestCreateOrders() {
+    @WithMockUser(username = "user", roles = {"USUARIO", "ADMINISTRADOR"})
+    void testLoadTestCreateOrders() throws Exception {
         String orderJson = "{ \"nombreCliente\": \"Load Test\", \"direccionCliente\": \"Test Address\", \"estadoOrden\": \"PENDIENTE\" }";
         long startTime = System.currentTimeMillis();
 
         for (int i = 0; i < 100; i++) {
-            given()
-                .contentType(ContentType.JSON)
-                .body(orderJson)
-            .when()
-                .post("/oms/ordenes")
-            .then()
-                .statusCode(200);
+            mockMvc.perform(post("/oms/ordenes")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(orderJson))
+                    .andExpect(status().isOk());
         }
 
         long endTime = System.currentTimeMillis();

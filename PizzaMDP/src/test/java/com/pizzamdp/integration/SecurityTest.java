@@ -1,41 +1,32 @@
 package com.pizzamdp.integration;
 
-import io.restassured.RestAssured;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 
-import static io.restassured.RestAssured.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ActiveProfiles("test")
+@AutoConfigureMockMvc
 public class SecurityTest extends AbstractIntegrationTest {
 
-    @LocalServerPort
-    private int port;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @BeforeEach
-    void setUp() {
-        RestAssured.port = port;
+    @Test
+    void testAccessToProtectedEndpointWithoutToken() throws Exception {
+        mockMvc.perform(get("/oms/ordenes"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void testAccessToProtectedEndpointWithoutToken() {
-        given()
-        .when()
-            .get("/oms/ordenes")
-        .then()
-            .statusCode(401);
-    }
-
-    @Test
-    @WithMockUser(username="user", roles={"INVALID_ROLE"})
-    void testAccessToProtectedEndpointWithWrongRole() {
-        given()
-        .when()
-            .get("/oms/ordenes")
-        .then()
-            .statusCode(403);
+    @WithMockUser(username = "user", roles = {"INVALID_ROLE"})
+    void testAccessToProtectedEndpointWithWrongRole() throws Exception {
+        mockMvc.perform(get("/oms/ordenes"))
+                .andExpect(status().isForbidden());
     }
 }
