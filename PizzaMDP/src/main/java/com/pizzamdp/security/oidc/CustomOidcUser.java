@@ -1,4 +1,4 @@
-package com.pizzamdp.security;
+package com.pizzamdp.security.oidc;
 
 import com.pizzamdp.entities.User;
 import org.springframework.security.core.GrantedAuthority;

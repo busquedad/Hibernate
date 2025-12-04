@@ -3,7 +3,7 @@ package com.pizzamdp.services;
 import com.pizzamdp.entities.Provider;
 import com.pizzamdp.entities.User;
 import com.pizzamdp.repositories.UserRepository;
-import com.pizzamdp.security.CustomOidcUser;
+import com.pizzamdp.security.oidc.CustomOidcUser;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
