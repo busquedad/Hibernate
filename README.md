@@ -222,5 +222,55 @@ sequenceDiagram
     Frontend->>User: 12. Update UI with Toast & add to list
 ```
 
-(Other sections remain the same)
-...
+## 5. API Endpoint Guide
+
+This section details the primary API endpoints, their purpose, and the required roles.
+
+### 5.1. Authentication
+
+-   **`POST /oauth2/token`**: Standard OAuth 2.0 token endpoint for exchanging an authorization code for a JWT access token. Used in the Authorization Code with PKCE flow.
+-   **`GET /oauth2/authorize`**: Endpoint to initiate the login flow, for both standard credentials and Google social login.
+
+### 5.2. Order Management System (`/oms`)
+
+-   **`POST /oms/ordenes`**:
+    -   **Description**: Creates a new pizza order. The request is processed asynchronously.
+    -   **Required Role**: `ROLE_CLIENTE`
+    -   **Request Body**: `CreateOrderDto` (JSON with `idVariedadPizza`, `idTamanioPizza`, `notas`)
+    -   **Success Response**: `HTTP 202 Accepted` (The final confirmation is sent via WebSocket).
+
+-   **`GET /oms/ordenes`**:
+    -   **Description**: Retrieves a list of orders. The returned orders are filtered based on the user's role.
+    -   **Required Roles**: `ROLE_CLIENTE`, `ROLE_RIDER`, `ROLE_ADMINISTRADOR`
+    -   **Response**: `200 OK` with a JSON array of `Order` objects.
+
+### 5.3. Pizza Catalog (`/api`)
+
+-   **`GET /api/pizzas`**:
+    -   **Description**: Fetches the list of available pizza sizes from the catalog.
+    -   **Required Role**: Any authenticated user.
+    -   **Response**: `200 OK` with a JSON array of `PizzaData` objects.
+
+## 6. Environment Variables
+
+The application is configured primarily through environment variables, which can be set in a `.env` file in the project root.
+
+| Variable             | Description                                                                                             | Example                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `GOOGLE_CLIENT_ID`     | The OAuth 2.0 Client ID obtained from the Google Cloud Console for social login.                        | `your-google-client-id.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | The client secret associated with the Google OAuth 2.0 Client ID.                                       | `GOCSPX-your-secret`                       |
+| `DB_PASSWORD`        | The password for the PostgreSQL database user. This is automatically used by Docker Compose.            | `password`                                 |
+| `CORS_ALLOWED_ORIGIN`| The origin allowed to make cross-origin requests to the backend. Defaults to `http://localhost:5173`. | `http://your-frontend-domain.com`          |
+
+## 7. Troubleshooting Guide
+
+Common issues and their solutions.
+
+-   **Issue**: Application fails to start, with Docker Compose logs showing the backend is in a crash loop.
+    -   **Solution**: This is often due to missing `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` environment variables. Ensure your `.env` file is correctly configured in the project root before running `sudo docker-compose up`.
+
+-   **Issue**: Login with Google works, but the user is immediately logged out or API calls fail with a 401 error.
+    -   **Solution**: Check the `CORS_ALLOWED_ORIGIN` configuration. If you are running the frontend on a different port or domain, the backend will reject the requests. Make sure the variable matches the frontend's origin URL.
+
+-   **Issue**: Frontend shows "Failed to fetch..." errors, and browser console shows network errors for API calls.
+    -   **Solution**: The Vite development server proxy is likely misconfigured. Verify that `frontend/vite.config.ts` has the correct `server.proxy` entries to redirect `/api`, `/oms`, and `/ws-pizza` to the backend service at `http://localhost:8080`.
