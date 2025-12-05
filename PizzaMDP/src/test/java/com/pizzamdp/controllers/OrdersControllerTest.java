@@ -2,11 +2,13 @@ package com.pizzamdp.controllers;
 
 import com.pizzamdp.config.AuthorizationServerConfig;
 import com.pizzamdp.entities.Orden;
-import com.pizzamdp.entities.Provider;
-import com.pizzamdp.entities.User;
+import com.pizzamdp.entities.*;
 import com.pizzamdp.repositories.OrdenRepository;
+import com.pizzamdp.repositories.PersonaRepository;
 import com.pizzamdp.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-@Disabled("Temporarily disabled due to a persistent ApplicationContext loading conflict with multiple SecurityFilterChain beans. The underlying code is correct, but the test environment needs further configuration to resolve bean conflicts.")
+@AutoConfigureTestEntityManager
 @ComponentScan(excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = AuthorizationServerConfig.class))
 public class OrdersControllerTest {
 
@@ -47,42 +50,52 @@ public class OrdersControllerTest {
     @Autowired
     private OrdenRepository ordenRepository;
 
+    @Autowired
+    private PersonaRepository personaRepository;
+
+    @Autowired
+    private TestEntityManager entityManager;
+
     @MockBean
     private JwtDecoder jwtDecoder;
 
-    private User cliente;
-    private User rider;
+    private User clienteUser;
+    private User riderUser;
+    private Cliente cliente;
+    private Rider rider;
+    private Local local;
 
     @BeforeEach
     void setUp() {
         ordenRepository.deleteAll();
+        personaRepository.deleteAll();
         userRepository.deleteAll();
 
-        cliente = User.builder()
-                .username("cliente@test.com")
-                .provider(Provider.LOCAL)
-                .roles(Collections.singletonList("CLIENTE"))
-                .password("password")
-                .build();
-        userRepository.save(cliente);
+        local = new Local(null, "Test Local", "123 Main St", null, null, "A test local", EstadoLocal.ABIERTO);
+        entityManager.persist(local);
 
-        rider = User.builder()
-                .username("rider@test.com")
-                .provider(Provider.LOCAL)
-                .roles(Collections.singletonList("RIDER"))
-                .password("password")
-                .build();
-        userRepository.save(rider);
+        clienteUser = User.builder().username("cliente@test.com").provider(Provider.LOCAL).roles(Collections.singletonList("ROLE_CLIENTE")).password("password").build();
+        userRepository.save(clienteUser);
+        cliente = new Cliente();
+        cliente.setUser(clienteUser);
+        personaRepository.save(cliente);
 
-        Orden ordenCliente1 = new Orden(null, cliente, null, LocalDateTime.now(), "PENDIENTE", null);
-        Orden ordenCliente2 = new Orden(null, cliente, rider, LocalDateTime.now(), "ASIGNADA", null);
+        riderUser = User.builder().username("rider@test.com").provider(Provider.LOCAL).roles(Collections.singletonList("ROLE_RIDER")).password("password").build();
+        userRepository.save(riderUser);
+        rider = new Rider();
+        rider.setUser(riderUser);
+        rider.setEstado(EstadoRider.DISPONIBLE);
+        personaRepository.save(rider);
+
+        Orden ordenCliente1 = new Orden(null, local, cliente, LocalDateTime.now(), TipoOrden.DELIVERY, EstadoOrden.PENDIENTE, null, null, null, "456 Side St", null);
+        Orden ordenCliente2 = new Orden(null, local, cliente, LocalDateTime.now(), TipoOrden.DELIVERY, EstadoOrden.EN_CAMINO, null, null, rider, "456 Side St", null);
         ordenRepository.saveAll(List.of(ordenCliente1, ordenCliente2));
     }
 
     @Test
     void whenAuthenticatedAsCliente_shouldReturnOnlyTheirOrders() throws Exception {
         mockMvc.perform(get("/oms/ordenes")
-                        .with(jwt().jwt(j -> j.subject(cliente.getUsername())).authorities(cliente.getAuthorities().toArray(new GrantedAuthority[0]))))
+                        .with(jwt().jwt(j -> j.subject(clienteUser.getUsername())).authorities(new SimpleGrantedAuthority("ROLE_CLIENTE"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
@@ -90,10 +103,10 @@ public class OrdersControllerTest {
     @Test
     void whenAuthenticatedAsRider_shouldReturnOnlyAssignedOrders() throws Exception {
         mockMvc.perform(get("/oms/ordenes")
-                        .with(jwt().jwt(j -> j.subject(rider.getUsername())).authorities(rider.getAuthorities().toArray(new GrantedAuthority[0]))))
+                        .with(jwt().jwt(j -> j.subject(riderUser.getUsername())).authorities(new SimpleGrantedAuthority("ROLE_RIDER"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].estadoOrden").value("ASIGNADA"));
+                .andExpect(jsonPath("$[0].estadoOrden").value("EN_CAMINO"));
     }
 
     @Test

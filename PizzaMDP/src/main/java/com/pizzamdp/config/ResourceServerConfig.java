@@ -29,8 +29,8 @@ public class ResourceServerConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/ws-pizza/**").permitAll()
-                .requestMatchers("/oms/ordenes", "/oms/ordenes/status").hasAnyRole("USUARIO", "ADMINISTRADOR")
-                .requestMatchers("/oms/**", "/catalogo/**", "/stock/**").hasRole("ADMINISTRADOR")
+                .requestMatchers("/oms/ordenes/**").hasAnyRole("CLIENTE", "RIDER", "ADMIN")
+                .requestMatchers("/catalogo/**", "/stock/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(

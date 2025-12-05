@@ -3,9 +3,11 @@ package com.pizzamdp.controllers;
 import com.pizzamdp.entities.Orden;
 import com.pizzamdp.entities.User;
 import com.pizzamdp.messaging.config.RabbitConfig;
+import com.pizzamdp.entities.Cliente;
 import com.pizzamdp.messaging.dto.OrderCreateEvent;
 import com.pizzamdp.security.oidc.CustomOidcUser;
 import com.pizzamdp.services.OrdersService;
+import com.pizzamdp.services.PersonaService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,12 @@ public class OrdersController {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private PersonaService personaService;
+
+    @Autowired
+    private com.pizzamdp.repositories.UserRepository userRepository;
+
     @GetMapping
     public List<Orden> getAllOrders(Authentication authentication) {
         User user = getUserFromAuthentication(authentication);
@@ -31,7 +39,7 @@ public class OrdersController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Orden> getOrderById(@PathVariable Integer id) {
+    public ResponseEntity<Orden> getOrderById(@PathVariable Long id) {
         // En un sistema completo, este endpoint también debería validar
         // que el cliente/rider solo pueda ver sus propias órdenes.
         return ordersService.getOrderById(id)
@@ -42,7 +50,8 @@ public class OrdersController {
     @PostMapping
     public ResponseEntity<Void> createOrder(@RequestBody Orden orden, Authentication authentication) {
         User user = getUserFromAuthentication(authentication);
-        orden.setCliente(user);
+        Cliente cliente = personaService.findOrCreateCliente(user);
+        orden.setCliente(cliente);
 
         // Aquí, en un sistema real, se realizaría una validación exhaustiva del objeto Orden
         // antes de encolar el evento.
@@ -63,6 +72,11 @@ public class OrdersController {
         }
         if (principal instanceof CustomOidcUser) {
             return ((CustomOidcUser) principal).getUser();
+        }
+        if (principal instanceof org.springframework.security.oauth2.jwt.Jwt) {
+            String username = ((org.springframework.security.oauth2.jwt.Jwt) principal).getSubject();
+            return userRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalStateException("User not found in database"));
         }
         // Debería lanzar una excepción si el tipo de principal es inesperado
         throw new IllegalStateException("Unknown principal type: " + principal.getClass());

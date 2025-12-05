@@ -1,8 +1,8 @@
 package com.pizzamdp.services;
 
-import com.pizzamdp.entities.Orden;
-import com.pizzamdp.entities.User;
+import com.pizzamdp.entities.*;
 import com.pizzamdp.repositories.OrdenRepository;
+import com.pizzamdp.repositories.PersonaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -19,29 +19,35 @@ public class OrdersService {
     @Autowired
     private OrdenRepository ordenRepository;
 
+    @Autowired
+    private PersonaRepository personaRepository;
+
     @Transactional(readOnly = true)
     public List<Orden> getOrdersForUser(User user) {
-        boolean isCliente = user.getAuthorities().stream()
-                                .map(GrantedAuthority::getAuthority)
-                                .anyMatch("ROLE_CLIENTE"::equals);
-
-        boolean isRider = user.getAuthorities().stream()
-                              .map(GrantedAuthority::getAuthority)
-                              .anyMatch("ROLE_RIDER"::equals);
-
-        if (isCliente) {
-            return ordenRepository.findByCliente(user);
-        } else if (isRider) {
-            return ordenRepository.findByRider(user);
+        Optional<Persona> personaOpt = personaRepository.findByUser(user);
+        if (personaOpt.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        // Por defecto (o para otros roles como ADMIN), devolver todo.
-        // En un sistema real, esto podría requerir un rol explícito.
-        return ordenRepository.findAll();
+        Persona persona = personaOpt.get();
+        if (persona instanceof Cliente) {
+            return ordenRepository.findByCliente((Cliente) persona);
+        } else if (persona instanceof Rider) {
+            return ordenRepository.findByRider((Rider) persona);
+        } else if (persona instanceof Staff) {
+            // Assuming Staff with ADMIN role can see all orders in their local
+            Staff staff = (Staff) persona;
+            if (staff.getRolOperativo() == RolStaff.ADMIN) {
+                return ordenRepository.findByLocal(staff.getLocal());
+            }
+        }
+
+        // Default to empty list for security
+        return Collections.emptyList();
     }
 
     @Transactional(readOnly = true)
-    public Optional<Orden> getOrderById(Integer id) {
+    public Optional<Orden> getOrderById(Long id) {
         return ordenRepository.findById(id);
     }
 
