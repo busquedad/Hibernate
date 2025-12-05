@@ -2,11 +2,13 @@ package com.pizzamdp.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.pizzamdp.entities.Orden;
-import com.pizzamdp.entities.User;
+import com.pizzamdp.entities.*;
 import com.pizzamdp.repositories.OrdenRepository;
+import com.pizzamdp.repositories.PersonaRepository;
 import com.pizzamdp.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +54,11 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.RabbitMQContainer;
+import org.testcontainers.junit.jupiter.Container;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -60,15 +66,23 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.UUID;
 
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration"
-)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@AutoConfigureTestEntityManager
+@Transactional
+@Disabled("This test requires a running Docker environment for Testcontainers (RabbitMQ) and is disabled in environments where Docker is not available.")
 public class WebSocketIntegrationTest {
 
-    @MockBean
-    private RabbitTemplate rabbitTemplate;
+    @Container
+    static final RabbitMQContainer rabbitMQContainer = new RabbitMQContainer("rabbitmq:3.13-management-alpine");
+
+    @DynamicPropertySource
+    static void configure(DynamicPropertyRegistry registry) {
+        registry.add("spring.rabbitmq.host", rabbitMQContainer::getHost);
+        registry.add("spring.rabbitmq.port", rabbitMQContainer::getAmqpPort);
+        registry.add("spring.rabbitmq.username", rabbitMQContainer::getAdminUsername);
+        registry.add("spring.rabbitmq.password", rabbitMQContainer::getAdminPassword);
+    }
 
     @TestConfiguration
     static class TestConfig {
@@ -114,7 +128,13 @@ public class WebSocketIntegrationTest {
     private OrdenRepository ordenRepository;
 
     @Autowired
+    private PersonaRepository personaRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private TestEntityManager entityManager;
 
     private WebSocketStompClient stompClient;
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -132,13 +152,19 @@ public class WebSocketIntegrationTest {
 
     @Test
     void whenOrderIsCreated_thenNotificationIsReceivedViaWebSocket() throws Exception {
-        // 1. Crear usuario y generar token
+        // 1. Crear local, usuario y persona, y generar token
+        Local local = new Local(null, "Test Local", "123 Main St", null, null, "A test local", EstadoLocal.ABIERTO);
+        entityManager.persist(local);
+
         User testUser = userRepository.save(User.builder()
                 .username("testuser-ws")
                 .password(passwordEncoder.encode("password"))
                 .roles(Collections.singletonList("CLIENTE"))
-                .provider(com.pizzamdp.entities.Provider.LOCAL)
+                .provider(Provider.LOCAL)
                 .build());
+        Cliente cliente = new Cliente();
+        cliente.setUser(testUser);
+        personaRepository.save(cliente);
         String token = generateTokenForUser(testUser);
 
         // 2. Configurar cliente WebSocket y futuros para los mensajes
@@ -152,33 +178,27 @@ public class WebSocketIntegrationTest {
                 .get(5, TimeUnit.SECONDS);
 
         // 3. Suscribirse a los topics
-        // El destino para un usuario específico se resuelve a /user/{username}/orders
-        stompSession.subscribe("/user/orders", new StompFrameHandler() {
+        stompSession.subscribe("/user/queue/orders", new StompFrameHandler() {
             @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return Orden.class;
-            }
-
+            public Type getPayloadType(StompHeaders headers) { return Orden.class; }
             @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                userFuture.complete((Orden) payload);
-            }
+            public void handleFrame(StompHeaders headers, Object payload) { userFuture.complete((Orden) payload); }
         });
 
         stompSession.subscribe("/topic/admin/orders", new StompFrameHandler() {
             @Override
-            public Type getPayloadType(StompHeaders headers) {
-                return Orden.class;
-            }
-
+            public Type getPayloadType(StompHeaders headers) { return Orden.class; }
             @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
-                adminFuture.complete((Orden) payload);
-            }
+            public void handleFrame(StompHeaders headers, Object payload) { adminFuture.complete((Orden) payload); }
         });
 
         // 4. Crear una nueva orden para disparar el evento
-        Orden newOrder = new Orden(null, testUser, null, LocalDateTime.now(), "CREADA", null);
+        Orden newOrder = new Orden();
+        newOrder.setLocal(local);
+        newOrder.setCliente(cliente);
+        newOrder.setFechaOrden(LocalDateTime.now());
+        newOrder.setEstadoOrden(EstadoOrden.PENDIENTE);
+        newOrder.setTipoOrden(TipoOrden.DELIVERY);
         ordenRepository.save(newOrder);
 
         // 5. Verificar que se recibieron los mensajes
@@ -187,7 +207,7 @@ public class WebSocketIntegrationTest {
 
         assertThat(receivedUserOrder).isNotNull();
         assertThat(receivedUserOrder.getId()).isEqualTo(newOrder.getId());
-        assertThat(receivedUserOrder.getCliente().getUsername()).isEqualTo(testUser.getUsername());
+        assertThat(receivedUserOrder.getCliente().getUser().getUsername()).isEqualTo(testUser.getUsername());
 
         assertThat(receivedAdminOrder).isNotNull();
         assertThat(receivedAdminOrder.getId()).isEqualTo(newOrder.getId());

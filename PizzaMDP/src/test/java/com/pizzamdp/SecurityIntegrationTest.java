@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ComponentScan(excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = AuthorizationServerConfig.class))
-@Disabled("Temporarily disabled due to persistent ApplicationContext loading issues in the test environment. The security configuration itself has been validated and is correct.")
+@Disabled("Temporarily disabled due to persistent ApplicationContext loading issues in the test environment.")
 public class SecurityIntegrationTest {
 
     @Autowired

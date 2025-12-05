@@ -21,10 +21,10 @@ public class OrdenEntityListener {
         messagingTemplate.convertAndSend("/topic/admin/orders", orden);
 
         // Notificar al cliente específico
-        if (orden.getCliente() != null && orden.getCliente().getUsername() != null) {
+        if (orden.getCliente() != null && orden.getCliente().getUser() != null && orden.getCliente().getUser().getUsername() != null) {
             messagingTemplate.convertAndSendToUser(
-                orden.getCliente().getUsername(),
-                "/orders",
+                orden.getCliente().getUser().getUsername(),
+                "/queue/orders",
                 orden
             );
         }

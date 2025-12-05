@@ -1,22 +1,14 @@
 package com.pizzamdp.entities;
 
-import java.math.BigDecimal;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
-@Table(name = "orden_item")
+@Table(name = "orden_items")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,28 +16,19 @@ public class OrdenItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_orden_item")
-    private Integer id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_orden", nullable = false)
+    @JoinColumn(name = "orden_id", nullable = false)
     private Orden orden;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_variedad_pizza", nullable = false)
-    private VariedadPizza variedadPizza;
+    @JoinColumn(name = "producto_id", nullable = false)
+    private Producto producto;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_tamanio_pizza", nullable = false)
-    private TamanioPizza tamanioPizza;
+    @Column(nullable = false)
+    private Integer cantidad;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_tipo_pizza", nullable = false)
-    private TipoPizza tipoPizza;
-
-    @Column(name = "cantidad", nullable = false)
-    private int cantidad;
-
-    @Column(name = "precio_unitario", nullable = false)
-    private BigDecimal precioUnitario;
+    @Column(nullable = false)
+    private BigDecimal precioUnitario; // Can be different from producto.precioBase due to promotions, etc.
 }
