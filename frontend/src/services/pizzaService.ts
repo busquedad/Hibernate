@@ -31,3 +31,49 @@ export const fetchPizzas = async (): Promise<PizzaData[]> => {
   });
   return response.data;
 };
+
+// Simple DTO for creating an order
+export interface CreateOrderDto {
+  // Assuming these are the fields required by the backend
+  idVariedadPizza: number;
+  idTamanioPizza: number;
+  notas: string;
+}
+
+// Data structure for an order returned by the API
+export interface Order {
+  id_orden: number;
+  fecha_alta: string;
+  estatus: string;
+  // Add other relevant fields
+}
+
+/**
+ * Fetches the list of orders from the API.
+ * The backend will filter orders based on the user's role.
+ * @returns {Promise<Order[]>} A promise that resolves to an array of orders.
+ */
+export const fetchOrders = async (): Promise<Order[]> => {
+  const token = localStorage.getItem('access_token');
+  const response = await axios.get('/oms/ordenes', { // Adjusted to the correct endpoint
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return response.data;
+};
+
+/**
+ * Creates a new order.
+ * Expects an HTTP 202 Accepted response.
+ * @param {CreateOrderDto} orderData The data for the new order.
+ * @returns {Promise<void>} A promise that resolves when the request is accepted.
+ */
+export const createOrder = async (orderData: CreateOrderDto): Promise<void> => {
+  const token = localStorage.getItem('access_token');
+  await axios.post('/oms/ordenes', orderData, { // Adjusted to the correct endpoint
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+};

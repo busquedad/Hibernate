@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import PizzaDisplay from './components/PizzaDisplay';
 import Login from './components/Login';
 import Callback from './components/Callback';
+import Dashboard from './components/Dashboard'; // Import Dashboard
 import { fetchPizzas } from './services/pizzaService';
 import type { PizzaData } from './services/pizzaService';
 import axios from 'axios';
@@ -43,19 +44,14 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/callback" element={<Callback />} />
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        } />
         <Route path="/" element={
           <PrivateRoute>
-            <div className="flex justify-center items-center h-screen bg-gray-100">
-              <div className="container mx-auto p-4">
-                <h1 className="text-4xl font-bold text-center text-blue-600 mb-8">
-                  Pizza Management Dashboard
-                </h1>
-                <PizzaDisplay
-                  pizzas={pizzas}
-                  error={error}
-                />
-              </div>
-            </div>
+            <Navigate to="/dashboard" />
           </PrivateRoute>
         } />
       </Routes>

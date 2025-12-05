@@ -4,6 +4,16 @@ import react from '@vitejs/plugin-react'
 
 // https:vite.devconfig
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8080', // Proxy for general API calls
+      '/oms': 'http://localhost:8080', // Proxy for order management
+      '/ws-pizza': {
+        target: 'ws://localhost:8080',
+        ws: true,
+      },
+    }
+  },
   plugins: [react()],
   test: {
     globals: true,
